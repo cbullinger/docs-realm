@@ -120,7 +120,6 @@ class QuickStartTest: RealmTest() {
         // :snippet-start: quick-start-open-a-local-realm
         // :uncomment-start:
         // val config = RealmConfiguration.create(schema = setOf(Item::class))
-        // val realm: Realm = Realm.open(config)
         // :uncomment-end:
         // :remove-start:
         val config = RealmConfiguration.Builder(schema = setOf(Item::class))
