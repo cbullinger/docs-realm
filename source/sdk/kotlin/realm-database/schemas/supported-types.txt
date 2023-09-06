@@ -36,8 +36,12 @@ The Kotlin SDK does *not* natively support:
   :ref:`RealmInstant <kotlin-timestamps>` section for more information on 
   how to use timestamps in your Realm objects.
 
-Additionally, the Kotlin SDK does not currently support abstract properties.
-Kotlin properties *must* be initialized. 
+.. _kotlin-optional:
+
+Realm object properties *must* be mutable and initialized when declared. The 
+Kotlin SDK does not currently support abstract properties. 
+You can declare properties optional (nullable) using the built-in ``?`` Kotlin 
+operator, or you can assign a default value to a property when you declare it.
 
 .. note:: 
    
@@ -461,11 +465,11 @@ RealmObjects as Properties
 --------------------------
 
 You can use ``RealmObject`` and any subclasses, *except* 
-``AsymmetricRealmObject`` as properties in your object model.
+``AsymmetricRealmObject``, as properties in your object model.
 
 .. important:: 
 
-    ``AsymmetricRealmObject`` *cannot* be used as properties. 
+    The ``AsymmetricRealmObject`` type *cannot* be used as a property. 
     For more information, refer to :ref:`Asymmetric Objects 
     <kotlin-asymmetric-objects>`. 
 
@@ -499,13 +503,15 @@ Backlinks implement:
 
 - the `BacklinksDelegate 
   <{+kotlin-local-prefix+}io.realm.kotlin.types/-backlinks-delegate/index.html>`__ 
-  type for ``RealmObject`` backlinks
+  type for ``RealmObject`` backlinks. A ``BacklinksDelegate<T>`` property is 
+  a `RealmResults <{+kotlin-local-prefix+}io.realm.kotlin.query/-realm-results/index.html>`__ 
+  list of the parent ``RealmObject`` type.
 - the `EmbeddedBacklinksDelegate 
   <{+kotlin-local-prefix+}io.realm.kotlin.types/-embedded-backlinks-delegate/index.html>`__ 
-  type for ``EmbeddedRealmObject`` backlinks
+  type for ``EmbeddedRealmObject`` backlinks. An ``EmbeddedBacklinksDelegate<T>`` property is
+  of the parent ``RealmObject`` type.
 
-For more information, refer to :ref:`Inverse Relationships 
-<kotlin-inverse-relationships>`.
+For more information, refer to :ref:`Inverse Relationships <kotlin-inverse-relationships>`.
 
 .. _kotlin-embedded-objects-as-properties:
 
@@ -531,7 +537,6 @@ Geospatial Types
 ----------------
 
 .. versionadded:: 1.11.0
-
 
 The Kotlin SDK supports geospatial queries using the following data types:
 

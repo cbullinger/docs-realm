@@ -10,52 +10,44 @@ Property Annotations - Kotlin SDK
    :depth: 2
    :class: singlecol
 
-You can use annotations to add functionality to properties in your Realm 
-:ref:`object models <kotlin-object-schema>`.
+This page describes the property annotations that you can use to customize
+the behavior of properties in your Realm :ref:`object models <kotlin-object-schema>`.
 
-.. _kotlin-optional:
+The Kotlin SDK provides several annotations that add functionality to 
+Realm object properties. Refer also to the `Annotations API reference 
+<{+kotlin-local-prefix+}io.realm.kotlin.types.annotations/index.html>`__.
 
-Required and Optional Properties
---------------------------------
+.. note:: Property Declarations
 
-In Kotlin, value types are implicitly non-nullable. 
-You can make properties optional (nullable) using the built-in ``?`` Kotlin operator.
+  In Kotlin, value types are implicitly non-nullable. You can declare 
+  properties optional (nullable) using the built-in ``?`` Kotlin operator.
+  Or you can assign a default value to a property in the property declaration.
+  Refer to the :ref:`<kotlin-data-types>` for examples.
 
-.. literalinclude:: /examples/generated/kotlin/SchemaTest.snippet.declare-properties.kt
+Examples on this page refer to the following ``User`` class:
+
+.. literalinclude:: /examples/generated/kotlin/Schema.snippet.example-property-annotations.kt
   :language: kotlin
-  :emphasize-lines: 8
-
-Default Field Values
---------------------
-
-You can assign a default value to a property in the property declaration.
-
-.. literalinclude:: /examples/generated/kotlin/SchemaTest.snippet.declare-properties.kt
-  :language: kotlin
-  :emphasize-lines: 10
 
 .. _kotlin-primary-keys:
 
 Specify a Primary Key
 ---------------------
 
-You can specify a property as the object type's primary key using the 
-`@PrimaryKey <{+kotlin-local-prefix+}io.realm.kotlin.types.annotations/-primary-key/index.html>`__
+A **primary key** is a unique identifier for an object in a realm. No other 
+objects of the same type can share an object's primary key.
+
+To specify a property as the object type's primary key, use the `@PrimaryKey 
+<{+kotlin-local-prefix+}io.realm.kotlin.types.annotations/-primary-key/index.html>`__
 annotation:
 
-.. literalinclude:: /examples/generated/kotlin/SchemaTest.snippet.declare-properties.kt
+.. literalinclude:: /examples/generated/kotlin/Schema.snippet.example-primary-key.kt  
   :language: kotlin
-  :emphasize-lines: 2-3
-
-Realm treats fields marked with the ``@PrimaryKey`` annotation
-as primary keys for their corresponding :ref:`object schema <kotlin-object-schema>`. 
-The primary key is a unique identifier for an object in a realm.
-No other objects of the same type may share an object's primary key.
 
 Important aspects of primary keys:
 
 - You can define only one primary key per object schema.
-- You cannot change the primary key field for an object type after
+- You *cannot* change the primary key field for an object type after
   adding any object of that type to a realm.
 - Primary key values must be unique across all instances of an object
   in a realm. Attempting to insert a duplicate primary key value results
@@ -63,8 +55,8 @@ Important aspects of primary keys:
 - Primary key values are immutable. To change the primary key value of
   an object, you must delete the original object and insert a new object
   with a different primary key value.
-- Primary keys are nullable. ``null`` can only be the primary key of one object
-  in a collection.
+- Primary keys are nullable. However, because primary key values must be unique, 
+  ``null`` can only be the primary key of one object in a collection.
 - Realm automatically indexes primary keys, so you can efficiently 
   read and modify objects based on their primary key.
 
@@ -86,57 +78,66 @@ Map a Property or Class to a Different Name
 
 .. versionadded:: 10.8.0 Remap class names with @PersistedName
 
-By default, Realm uses the name defined in the model class
-to represent classes and fields internally. 
-In some cases, you might want to change this behavior:
+By default, Realm uses the name defined in the Kotlin model class to 
+represent classes and fields internally. In some cases, you might want 
+to define a different **persisted name** to the realm than the name 
+used in your code:
 
 - To make it easier to work across platforms where naming conventions differ. 
   For example, if your Device Sync schema property names use snake case, 
   while your project uses camel case.
-- To change a class or field name in Kotlin without forcing a :ref:`migration <kotlin-migrations>`.
+- To change a class or property name in Kotlin without forcing a :ref:`migration <kotlin-migrations>`.
 - To support multiple model classes with the same simple name in different packages.
 - To use a class name that is longer than the 57-character limit enforced by Realm.
 
-To map a class or property name in your code to a different name to store in
-a realm, use the `@PersistedName <{+kotlin-local-prefix+}io.realm.kotlin.types.annotations/-persisted-name/index.html>`__
-annotation in the :ref:`object schema <kotlin-object-schema>`. Specify 
-a class or property ``name`` that you want persisted to the realm. 
-If you write to a synced realm, the Sync schema sees the values stored using the
-persisted class or property name.
+To map a Kotlin class or property name in your code to a different 
+name to persist in the realm:  
 
-Note that migrations must use the persisted class or property name, 
-and any schema errors reported also use the persisted name. 
+#. Use the `@PersistedName 
+   <{+kotlin-local-prefix+}io.realm.kotlin.types.annotations/-persisted-name/index.html>`__
+   annotation on the Kotlin class or property. 
+#. Specify the class or property ``name`` that you want persisted to the realm. 
 
 .. tabs::
 
    .. tab:: Remap a Class
       :tabid: class-persisted-name
 
-      In this example, ``Cat`` is the Kotlin class name used in the code 
-      throughout the project to perform CRUD operations, and ``Feline`` is the
+      In this example, ``Employee`` is the Kotlin class name used in the code 
+      throughout the project to perform CRUD operations, and ``User`` is the
       persisted name to used to store objects in a realm:
 
-      .. literalinclude:: /examples/generated/kotlin/SchemaTest.snippet.class-persisted-name.kt
+      .. literalinclude:: /examples/generated/kotlin/Schema.snippet.example-persisted-class.kt
         :language: kotlin
 
-      .. important::
+      .. important:: Querying by Remapped Class Names
         
-          Queries on class names remapped in this way must use the persisted name,
-          not the Kotlin name, when querying an inverse relationship.
+          When querying an inverse relationship on an object with a 
+          remapped class name, you must use the persisted class name.
+          For more information, refer to 
+          :ref:`<kotlin-query-inverse-relationships>`.
 
    .. tab:: Remap a Property
       :tabid: property-persisted-name
 
-      In this example, ``species`` is the Kotlin property name used in the code 
-      throughout the project to perform CRUD operations and ``latin_name`` is the 
-      persisted name used to store values in a realm:
+      In this example, ``office`` is the Kotlin property name used in the code 
+      throughout the project to perform CRUD operations, and ``office_location`` 
+      is the persisted name used to store values in a realm:
 
-      .. literalinclude:: /examples/generated/kotlin/SchemaTest.snippet.declare-properties.kt
+      .. literalinclude:: /examples/generated/kotlin/Schema.snippet.example-persisted-property.kt
         :language: kotlin
-        :emphasize-lines: 15-16
 
-      You can query by both the Kotlin name used in the code
-      and by the persisted name stored in a realm.
+      .. tip:: Querying by Remapped Property Names
+        
+        You can query by both the Kotlin property name used in the code and 
+        by the persisted name stored in the realm.
+
+If you write to a synced realm, the Sync schema sees the values stored using the 
+persisted class or property name. Note the following: 
+
+- Migrations *must* use the persisted class or property name
+- Any reported schema errors use the persisted name
+
 
 .. _kotlin-ignore:
 
@@ -144,30 +145,35 @@ Ignore Properties from Realm Schema
 -----------------------------------
 
 By default, Realm manages properties defined in your Realm object model. 
-
-- Managed properties are stored or updated in the database.
-- Ignored properties are *not* stored to the database. They behave exactly like 
-  normal properties, but they can't be used in queries and don't trigger Realm 
-  notifications.
- 
-You can mix managed and ignored properties within a class. 
+However, you can choose to ignore properties that you don't want to persist in 
+a realm. 
 
 To ignore a property and prevent it from persisting in a realm or being included
 in the ``RealmObject`` :ref:`object schema <kotlin-object-schema>`, use the 
 `@Ignore <{+kotlin-local-prefix+}io.realm.kotlin.types.annotations/-ignore/index.html>`__
 annotation:
 
-.. literalinclude:: /examples/generated/kotlin/SchemaTest.snippet.declare-properties.kt
+.. literalinclude:: /examples/generated/kotlin/Schema.snippet.example-ignore.kt
   :language: kotlin
-  :emphasize-lines: 12-13
+
+Unlike managed properties, which are stored or updated in the database, 
+ignored properties are *not* stored to the database. Ignored properties behave 
+exactly like managed properties, except that they can't be used in queries 
+and don't trigger Realm notifications.
+ 
+You can mix managed and ignored properties within a class. 
 
 .. _kotlin-indices:
 
 Index Properties
 ----------------
 
-Indexes speed up some queries at the cost of slightly slower write times and
-additional storage and memory overhead. Realm stores indexes on disk,
+Indexes are special data structures that store a small portion of a realm's data
+in an easy to traverse form. The index stores the value of a specific field
+ordered by the value of the field. The ordering of the index entries supports
+efficient equality matches and range-based query operations. 
+Note that indexes speed up some queries at the cost of slightly slower write 
+times and additional storage and memory overhead. Realm stores indexes on disk,
 which makes your realm files larger. Each index entry is
 a minimum of 12 bytes.
 
@@ -175,25 +181,16 @@ To create an index on a property, use the `@Index
 <{+kotlin-local-prefix+}io.realm.kotlin.types.annotations/-index/index.html>`__
 annotation in the :ref:`object schema <kotlin-object-schema>`:
 
-.. literalinclude:: /examples/generated/kotlin/SchemaTest.snippet.declare-properties.kt
+.. literalinclude:: /examples/generated/kotlin/Schema.snippet.declare-properties.kt
   :language: kotlin
-  :emphasize-lines: 5-6
 
 .. note:: 
 
    :ref:`Primary keys <kotlin-primary-keys>` are indexed by default.
 
-Indexes support the efficient execution of queries in a realm.
-Without indexes, Realm must perform a *collection scan*, i.e.
-scan every document in a collection, to select those documents that
-match a query. If an appropriate index exists for a query, Realm
-Database can use the index to limit the number of documents that it
-must inspect.
-
-Indexes are special data structures that store a small portion of a realm's data
-in an easy to traverse form. The index stores the value of a specific field
-ordered by the value of the field. The ordering of the index entries supports
-efficient equality matches and range-based query operations. 
+You *cannot* combine standard indexes and full-text indexes on the same property. 
+To use full-text search indexes on a property, refer to the :ref:`<kotlin-fts-index>` 
+section.
 
 You can index fields with the following types:
 
@@ -217,24 +214,20 @@ In addition to standard indexes, Realm also supports Full-Text Search
 field with or without a standard index, an FTS index enables searching 
 for multiple words and phrases and excluding others.
 
-To create an FTS index on a ``String`` property, use the `@FullText
-<{+kotlin-local-prefix+}io.realm.kotlin.types.annotations
-/-full-text/index.html>`__ annotation. This enables full-text queries
-on the property. In the following example, we mark the ``genre`` 
-property with the FTS annotation:
+To create an FTS index to enable full-text queries on a property, use 
+the `@FullText
+<{+kotlin-local-prefix+}io.realm.kotlin.types.annotations/-full-text/index.html>`__ 
+annotation:
 
-.. literalinclude:: /examples/generated/kotlin/ReadTest.snippet.kotlin-fts-property.kt
+.. literalinclude:: /examples/generated/kotlin/Schema.snippet.example-full-text.kt
   :language: kotlin
-  :emphasize-lines: 3-4
 
 Note the following constraints on FTS indexes:
 
-- You can only annotate ``String`` properties with ``@FullText``.
-- FTS indexes can't be combined with standard indexes. You *cannot* annotate 
-  the same property with `@Index 
-  <{+kotlin-local-prefix+}io.realm.kotlin.types.annotations/-index/index.html>`__ 
-  and `@FullText
-  <{+kotlin-local-prefix+}io.realm.kotlin.types.annotations/-full-text/index.html>`__.
+- FTS indexes are only valid for fields with ``String`` types.
+- You *cannot* combine FTS indexes and standard indexes on the same property. 
+  To use standard indexes on a property, refer to the :ref:`<kotlin-indices>` 
+  section.
 
 .. note:: Character Limitations for Full-Text Search Indexes
 

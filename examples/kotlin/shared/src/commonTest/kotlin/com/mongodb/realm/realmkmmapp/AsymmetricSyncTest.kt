@@ -10,9 +10,6 @@ import io.realm.kotlin.mongodb.ext.call
 import io.realm.kotlin.mongodb.ext.insert
 import io.realm.kotlin.mongodb.sync.SyncConfiguration
 import io.realm.kotlin.mongodb.syncSession
-import io.realm.kotlin.types.AsymmetricRealmObject
-import io.realm.kotlin.types.annotations.PersistedName
-import io.realm.kotlin.types.annotations.PrimaryKey
 import org.mongodb.kbson.ObjectId
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -25,19 +22,6 @@ import kotlin.time.Duration.Companion.seconds
 //   }
 // }
 class AsymmetricSyncTest : RealmTest() {
-
-    // :snippet-start: asymmetric-model
-    class WeatherSensor : AsymmetricRealmObject {
-        @PersistedName("_id")
-        @PrimaryKey
-        var id: ObjectId = ObjectId()
-        var deviceId: String = ""
-        var temperatureInFarenheit: Float = 0.0F
-        var barometricPressureInHg: Float = 0.0F
-        var windSpeedInMph: Int = 0
-    }
-    // :snippet-end:
-
 
     @OptIn(ExperimentalAsymmetricSyncApi::class, ExperimentalRealmSerializerApi::class)
     @Test

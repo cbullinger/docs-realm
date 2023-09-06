@@ -7,8 +7,6 @@ import io.realm.kotlin.ext.query
 import io.realm.kotlin.ext.realmDictionaryOf
 import io.realm.kotlin.internal.platform.runBlocking
 import io.realm.kotlin.query.RealmResults
-import io.realm.kotlin.types.RealmDictionary
-import io.realm.kotlin.types.RealmObject
 import org.mongodb.kbson.ObjectId
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -16,24 +14,18 @@ import kotlin.test.assertTrue
 
 // :replace-start: {
 //    "terms": {
-//       "UpdateTest_": "",
+//       "RealmDictionary_": "",
 //       "CRUDTest.": "",
 //       "frogObjectId": "ObjectId()"
 //    }
 // }
-
-class UpdateTest_Frog : RealmObject {
-    var _id: ObjectId = ObjectId()
-    var name: String = ""
-    var favoritePondsByForest: RealmDictionary<String> = realmDictionaryOf()
-}
 
 class UpdateTest: RealmTest() {
     @Test
     fun updateRealmDictionaryType() {
         runBlocking {
             val config = RealmConfiguration.Builder(
-                schema = setOf(UpdateTest_Frog::class) // Pass the defined class as the object schema
+                schema = setOf(RealmDictionary_Frog::class) // Pass the defined class as the object schema
             )
                 .directory("/tmp/") // default location for jvm is... in the project root
                 .build()
@@ -43,7 +35,7 @@ class UpdateTest: RealmTest() {
             // Delete frogs to make this test successful on consecutive reruns
             realm.write {
                 // fetch all frogs from the realm
-                val frogs: RealmResults<UpdateTest_Frog> = this.query<UpdateTest_Frog>().find()
+                val frogs: RealmResults<RealmDictionary_Frog> = this.query<RealmDictionary_Frog>().find()
                 // call delete on the results of a query to delete those objects permanently
                 delete(frogs)
                 assertEquals(0, frogs.size)
@@ -51,14 +43,14 @@ class UpdateTest: RealmTest() {
 
             // Create an object with a dictionary property to set up the test
             realm.write {
-                this.copyToRealm(UpdateTest_Frog().apply {
+                this.copyToRealm(RealmDictionary_Frog().apply {
                     name = "Kermit"
                     favoritePondsByForest = realmDictionaryOf("Hundred Acre Wood" to "Picnic Pond", "Lothlorien" to "Linya")
                 })
             }
             // :snippet-start: update-realm-dictionary
             // Find frogs who have forests with favorite ponds
-            val frogs = realm.query<UpdateTest_Frog>().find()
+            val frogs = realm.query<RealmDictionary_Frog>().find()
             val frogsWithFavoritePonds = frogs.query("favoritePondsByForest.@count > 1").find()
             val thisFrog = frogsWithFavoritePonds.first()
             // :remove-start:
@@ -79,7 +71,7 @@ class UpdateTest: RealmTest() {
                 findLatest(thisFrog)?.favoritePondsByForest?.put("Sherwood Forest", "Miller Pond")
             }
             // :snippet-end:
-            val thisFrogUpdated = realm.query<UpdateTest_Frog>("favoritePondsByForest.@count > 1").find().first()
+            val thisFrogUpdated = realm.query<RealmDictionary_Frog>("favoritePondsByForest.@count > 1").find().first()
             assertTrue(thisFrogUpdated.favoritePondsByForest.containsValue("Lily Pad Pond"))
             assertTrue(thisFrogUpdated.favoritePondsByForest.containsKey("Sherwood Forest"))
             assertTrue(thisFrogUpdated.favoritePondsByForest["Sherwood Forest"] == "Miller Pond")

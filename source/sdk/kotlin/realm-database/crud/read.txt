@@ -61,6 +61,15 @@ method to access the parent of the embedded object.
 .. literalinclude:: /examples/generated/kotlin/DataTypesTest.snippet.query-embedded-objects.kt 
     :language: kotlin
 
+.. .. _kotlin-query-inverse-relationships:
+
+.. Query an Inverse Relationship
+.. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. When querying inverse relationship You *must* query by the persisted class name, not the Kotlin name, when querying an inverse relationship.
+
+.. kotlin-remap-a-property
+
 Query a Dictionary Property
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
