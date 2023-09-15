@@ -1,2 +1,2 @@
-@Ignore // Ignored property
-var temporaryId: Int = 0
+@Ignore
+var temporaryId: Int = 0 // Ignored property

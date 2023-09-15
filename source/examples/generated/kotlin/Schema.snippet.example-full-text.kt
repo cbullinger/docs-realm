@@ -1,2 +1,2 @@
-@FullText // Full-text search indexed property
-var personalBio: String = ""
+@FullText
+var personalBio: String = "" // Full-text search indexed property

@@ -1,3 +1,2 @@
-@PrimaryKey // Primary key property
-@Index
-var _id: ObjectId = ObjectId()
+@PrimaryKey
+var _id: ObjectId = ObjectId() // Primary key property

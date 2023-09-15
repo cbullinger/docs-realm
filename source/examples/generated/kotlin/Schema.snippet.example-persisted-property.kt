@@ -1,2 +1,2 @@
-@PersistedName(name = "office_location") // Remapped property
-var office: String? = null
+@PersistedName(name = "office_location")
+var office: String? = null // Remapped property

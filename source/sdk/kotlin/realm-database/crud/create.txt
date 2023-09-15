@@ -127,12 +127,10 @@ Create an Asymmetric Object
 
 .. versionadded:: 1.10.0
 
-An asymmetric object is an insert-only object. 
-When you create an ``AsymmetricRealmObject``, it syncs unidirectionally via 
-:ref:`Data Ingest <optimize-data-ingest>` to the Atlas 
-database linked to your Atlas App Services App. You cannot access an
-``AsymmetricRealmObject`` locally, add it to or remove it from a realm, or query for it.
-For more information, see :ref:`Asymmetric Objects <kotlin-asymmetric-objects>`.
+An :ref:`asymmetric object <kotlin-asymmetric-objects>` is an 
+insert-only object intended to be used with the Atlas Device Sync feature Data 
+Ingest and requires a synced realm. For information on how to set up
+Data Ingest with your application, refer to :ref:`kotlin-stream-data-to-atlas`.
 
 You must create an `AsymmetricRealmObject <{+kotlin-sync-prefix+}io.realm.kotlin.types/-asymmetric-realm-object/index.html>`__  
 using the `insert() <{+kotlin-sync-prefix+}io.realm.kotlin.mongodb.ext/insert.html>`__  
@@ -140,7 +138,3 @@ extension method within a write transaction:
 
 .. literalinclude:: /examples/generated/kotlin/AsymmetricSyncTest.snippet.create-asymmetric-object.kt
    :language: kotlin
-
-You can create asymmetric objects for a realm initialized with a Flexible Sync
-`SyncConfiguration <{+kotlin-sync-prefix+}io.realm.kotlin.mongodb.sync/-sync-configuration/index.html>`__.
-For more information, see :ref:`Open the synced Realm with a Flexible Sync configuration <kotlin-open-a-synced-realm>`.

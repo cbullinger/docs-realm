@@ -1,6 +1,8 @@
-class GrandpaFrog : RealmObject {
+// Parent object must have RealmList<E>, RealmSet<E>, or
+// RealmDictionary<K,V> property of child type
+class Grandparent : RealmObject {
     var name: String = ""
-    var children: RealmList<PapaFrog> = realmListOf()
-    var grandchildren: RealmSet<Tadpole> = realmSetOf()
-    var favoriteChildByAge: RealmDictionary<PapaFrog?> = realmDictionaryOf()
+    var children: RealmList<Parent> = realmListOf()
+    var grandchildren: RealmSet<Child> = realmSetOf()
+    var favoriteChildByAge: RealmDictionary<Parent?> = realmDictionaryOf()
 }

@@ -7,10 +7,9 @@ Model Data - Kotlin SDK
 .. toctree::
    :titlesonly:
    
-   Define an Object Model </sdk/kotlin/realm-database/schemas/define-realm-object-model-combined>
-   Realm Objects </sdk/kotlin/realm-database/schemas/realm-objects>
+   Define an Object Model </sdk/kotlin/realm-database/schemas/define-realm-object-model>
    Supported Data Types </sdk/kotlin/realm-database/schemas/supported-types>
    Property Annotations </sdk/kotlin/realm-database/schemas/property-annotations>
-   Define an Object Model </sdk/kotlin/realm-database/schemas/define-realm-object-model>
+   Relationships </sdk/kotlin/realm-database/schemas/relationships>
    Geospatial Data </sdk/kotlin/realm-database/schemas/geospatials>
    Change an Object Model </sdk/kotlin/realm-database/schemas/change-an-object-model>

@@ -1,2 +1,2 @@
-@Index // Indexed property
-var name: String = ""
+@Index
+var name: String = "" // Indexed property

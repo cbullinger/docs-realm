@@ -1,8 +1,7 @@
-// Note the empty constructor and that the
-// class inherits from `RealmObject`
-class Frog : RealmObject {
+// Implements the `RealmObject` interface
+class Frog : RealmObject { // Empty constructor required by Realm
     @PrimaryKey
     var _id: ObjectId = ObjectId()
     var name: String = ""
-    var age: Int = 0
+    var age: Int? = null
 }

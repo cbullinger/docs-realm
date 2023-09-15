@@ -11,17 +11,49 @@ Define a Realm Object Model - Kotlin SDK
    :depth: 2
    :class: singlecol
 
-This page describes how to define Realm objects as part of your application's 
-data model. To learn more about Realm objects and their properties, 
-refer to :ref:`Realm Objects <kotlin-realm-objects-and-relationships>`.
-To learn about how to make changes to your Realm objects after
-defining your Realm object model, refer to 
-:ref:`Change an Object Model <kotlin-change-object-model>`.
+This page describes Realm object types and how to define Realm objects as part of 
+your application's data model. After you define your object model, you can
+:ref:`open a realm <kotlin-open-a-realm>` with a schema that includes your 
+defined objects and work with them in the realm. 
 
 The Kotlin SDK memory maps Realm objects directly to native Kotlin 
 objects, so there's no need to use a special data access library. 
 You define your application's data model via regular Kotlin classes declared
 in your application code object. 
+
+To learn about how to make changes to your Realm objects after
+defining your Realm object model, refer to 
+:ref:`Change an Object Model <kotlin-change-object-model>`.
+
+.. _kotlin-object-type:
+.. _kotlin-object-schema:
+
+Realm Objects
+-------------
+
+**Realm objects** are uniquely named Kotlin classes that you can work with 
+as you would any other class instance. 
+
+Each object class represents an **object type**. Objects of the same type share 
+an **object schema**, which defines the properties and relationships for objects 
+of that type. The SDK guarantees that all objects in a realm conform to the 
+schema for their object type and validates objects whenever they are created, 
+modified, or deleted.
+
+However, note that Realm objects have the following constraints:
+
+- Realm objects *must* inherit from the ``RealmObject`` class or its 
+  subclasses: ``EmbeddedRealmObject`` or ``AsymmetricRealmObject``. 
+  The Kotlin SDK does *not* support inheritance from custom base classes. 
+- The Kotlin SDK requires that Realm objects have an empty constructor. 
+  Refer to the :ref:`workaround example <kotlin-single-primary-constructor>`
+  noted in the next section.
+- Class names are limited to a maximum of 57 UTF-8 characters. 
+
+Additionally, the Kotlin SDK does *not* support using Kotlin
+`data classes <https://kotlinlang.org/docs/data-classes.html>`__ to model 
+data. This is because data classes are typically used for immutable data, 
+which goes against how the Realm Kotlin SDK models data.
 
 .. _kotlin-define-a-new-object-type:
 
@@ -29,21 +61,34 @@ Define a New Object Type
 ------------------------
 
 To define a new Realm object type, you must create a uniquely named Kotlin 
-class that implements either the ``RealmObject`` base class or one of its subclasses: 
-``EmbeddedRealmObject`` or ``AsymmetricRealmObject``.
+class that implements either the ``RealmObject``, 
+``EmbeddedRealmObject``, or ``AsymmetricRealmObject`` interface. 
 
 .. include:: /includes/note-class-char-limit.rst
 
 Then, you specify your object's properties, including:
 
-- The :ref:`data types <kotlin-supported-types>`
-- Whether they're optional or required
-- Any :ref:`property annotations <kotlin-property-annotations>` 
-- If there's a :ref:`relationship <kotlin-relationships>` to another Realm object
+- The :ref:`data type <kotlin-supported-types>` for each property. 
+  The Kotlin SDK supports the following data types: 
+
+  - `Kotlin primitive types <https://kotlinlang.org/docs/basic-types.html>`__
+  - a limited subset of `BSON <https://bsonspec.org/>`__ types
+  - Realm-specific types, which you can use for unique 
+    identifiers, timestamps, counters, and collections
+
+- Any :ref:`property annotations <kotlin-property-annotations>`, which add 
+  functionality to properties in your Realm objects. You can use annotations to: 
+
+  - Designate a property as a primary key
+  - Mark a property as indexable
+  - Ignore a property 
+  - Map a property or class name to another name 
+
+- Any :ref:`relationships <kotlin-relationships>` with other Realm objects. 
 
 After you've defined your Realm object model, you can pass the set of object 
 classes to the realm's configuration when you :ref:`open a realm 
-<kotlin-open-a-realm>`. Then, you can work with those objects in the realm.
+<kotlin-open-a-realm>`, and then work with those objects in the realm.
 
 .. _kotlin-single-primary-constructor:
 
@@ -70,36 +115,73 @@ interface:
 .. literalinclude:: /examples/generated/kotlin/Schema.snippet.define-realm-object.kt
   :language: kotlin
 
-You can then :ref:`use the object as a property <kotlin-realm-objects-as-properties>` 
-to define relationships with other Realm objects. Refer to the 
-:ref:`<kotlin-define-relationship-properties>` section for more information.
+You can then use the :ref:`object as a property <kotlin-realm-objects-as-properties>` 
+to :ref:`define relationships <kotlin-relationships>` with other Realm objects. 
 
 .. _kotlin-define-embedded-object:
+.. _kotlin-embedded-objects:
 
 Define an Embedded Object
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To define an :ref:`embedded object <kotlin-embedded-objects>`, create a Kotlin 
-class that implements the `EmbeddedRealmObject 
+An ``EmbeddedRealmObject`` is a special type of Realm object that models 
+complex data about a specific object. Realm treats each embedded object as 
+nested data inside of a single specific parent object.
+
+Embedded objects are similar to relationships, 
+but an embedded object inherits the lifecycle of its parent object and cannot 
+exist as an independent Realm object. 
+Because of this, embedded objects have the following constraints: 
+
+- Embedded objects are automatically deleted when their parent object is 
+  deleted or their parent no longer references them. 
+- Embedded objects *cannot* have a :ref:`primary key <kotlin-primary-keys>`. 
+- You *cannot* reassign an embedded object to a different parent object.
+- You *cannot* link to an embedded object from multiple parent objects. 
+
+.. tip:: 
+   
+   If you need to manually manage the lifecycle of a referenced object or 
+   want the referenced objects to persist after the deletion of the parent 
+   object, use a regular Realm object with a :ref:`to-one relationship 
+   <kotlin-to-one-relationship>` instead. 
+   For more information on when to use embedded relationships over non-embedded 
+   relationship, refer to :ref:`<kotlin-relationships>`.
+
+To define an embedded object, create a Kotlin class that implements the 
+`EmbeddedRealmObject 
 <{+kotlin-local-prefix+}io.realm.kotlin.types/-embedded-realm-object/index.html>`__
 interface:
 
 .. literalinclude:: /examples/generated/kotlin/Schema.snippet.define-embedded-object.kt 
     :language: kotlin
 
-You must then :ref:`embed the object as a property <kotlin-embedded-objects-as-properties>` 
-of another Realm object to define the relationship with the parent object:
+Because embedded objects can't exist as independent Realm objects, you *must* 
+also define the :ref:`embedded object as a property <kotlin-embedded-objects-as-properties>` 
+of another Realm object before you can use it in your realm:
 
-.. literalinclude:: /examples/generated/kotlin/Schema.snippet.embed-defined-object.kt 
-   :language: kotlin
+.. literalinclude:: /examples/generated/kotlin/Schema.snippet.define-embedded-relationship.kt
+    :language: kotlin
 
- Refer to the 
-:ref:`<kotlin-define-relationship-properties>` section for more information.
+.. tip:: Embedded Object Types are Reusable and Composable
+
+   You can use the same embedded object type in multiple parent object types, and
+   you can embed objects inside other embedded objects. You can even
+   recursively reference an embedded object type as an optional property in its
+   own definition.
+
+.. _kotlin-asymmetric-objects:
 
 Define an Asymmetric Object
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: 1.10.0
+
+An ``AsymmetricRealmObject`` is an insert-only object intended to be used with 
+the Atlas Device Sync feature Data Ingest. For information on how to set up
+Data Ingest with your application, refer to :ref:`kotlin-stream-data-to-atlas`.
+
+.. include:: /includes/kotlin-asymmetric-object.rst
 
 To define an :ref:`asymmetric object<kotlin-asymmetric-objects>`, create a 
 Kotlin class that implements the `AsymmetricRealmObject 
@@ -109,21 +191,28 @@ interface:
 .. literalinclude:: /examples/generated/kotlin/Schema.snippet.define-asymmetric-model.kt 
     :language: kotlin
 
-You *cannot* use an asymmetric object as a property in another Realm object.
+.. _kotlin-define-collections:
 
 Define Collection Properties
 ----------------------------
 
-You can define collections of items using 
-``RealmList``, ``RealmSet``, and ``RealmDictionary`` types.
+A collection is an object that contains zero or more instances of a supported 
+data type. Realm collections are homogenous (all objects in a collection are 
+of the same type) and are backed by their corresponding built-in Kotlin classes.
+For more information on the collection types used in the Kotlin SDK and their
+supported data types, refer to :ref:`Collection Types <kotlin-collection-types>`.
+
+The Kotlin SDK offers several collection types that you can use as 
+properties in your data model: ``RealmList``, ``RealmSet``, and 
+``RealmDictionary``.
+
+Collections also let you define to-many relationships between Realm objects.
+Refer to :ref:`<kotlin-relationships>` for more information.
 
 .. important:: Initialize Collection Properties
    
    Collection types are non-null. When you define a collection property, 
    you *must* initialize it. 
-
-For more information on the collection types used in the Kotlin SDK, 
-refer to :ref:`Collection Types <kotlin-collection-types>`.
 
 Define a RealmList
 ~~~~~~~~~~~~~~~~~~
@@ -165,63 +254,4 @@ the default value using `realmDictionaryOf()
 .. include:: /includes/map-key-string-limitations.rst
 
 .. literalinclude:: /examples/generated/kotlin/CreateTest.snippet.percent-encode-disallowed-characters.kt
-   :language: kotlin
-
-.. _kotlin-define-relationship-properties:
-
-Define a Relationship Property
-------------------------------
-
-You can define relationships between Realm objects in your schema. 
-The Realm Kotlin SDK supports to-one relationships, to-many relationships, 
-inverse relationships, and embedding objects within other objects. 
-
-You can define relationships between your objects using the following
-types:
-
-- ``RealmObject``
-- ``RealmList <RealmObject>``
-- ``RealmSet <RealmObject>``
-
-For more information, refer to the :ref:`Relationships <kotlin-relationships>` 
-page.
-
-kotlin-realm-objects-as-properties
-
-Define a To-One Relationship
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-To define a one-to-one or a many-to-one relationship between objects, 
-define an object property whose type is another Realm object in your data model: 
-
-.. literalinclude:: /examples/generated/kotlin/Schema.snippet.define-to-one-relationship-property.kt
-  :language: kotlin
-  :emphasize-lines: 6-9
-
-Define a To-Many Relationship
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-To define a to-many relationship between objects, define an object property whose type
-is a ``RealmList<T>`` or ``RealmSet<T>``, where <E> is another Realm object in your data model:
-
-.. literalinclude:: /examples/generated/kotlin/Schema.snippet.define-to-many-relationship-property.kt
-  :language: kotlin
-  :emphasize-lines: 5-8
-
-Define an Inverse Relationship 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-To define an :ref:`inverse relationship <kotlin-inverse-relationships>` between
-objects, first define a parent object property whose type is a ``RealmList<T>``, ``RealmSet<T>``, or ``RealmDictionary<T>``, where <E> is another Realm object in your data model:
-
-.. literalinclude:: /examples/generated/kotlin/Schema.snippet.define-inverse-property-parent.kt
-  :language: kotlin
-
-Then, define a child object with a backlink property to the parent object using the ``backlinks()`` method: 
-
-- For ``RealmObject`` child objects, define an immutable backlinks property of ``RealmResults`` list 
-  of the parent object type. 
-- For ``EmbeddedRealmObject`` child objects, define an immutable backlinks property of the parent object type.
-
-.. literalinclude:: /examples/generated/kotlin/Schema.snippet.define-inverse-property-children.kt
    :language: kotlin

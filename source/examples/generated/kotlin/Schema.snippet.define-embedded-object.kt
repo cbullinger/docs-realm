@@ -1,5 +1,6 @@
-// Inherits from `EmbeddedRealmObject`
-// Cannot have a primary key
-class EmbeddedRealmObject_Forest : EmbeddedRealmObject {
+// Implements `EmbeddedRealmObject` interface
+class Forest : EmbeddedRealmObject {
+    // Cannot have a primary key
+    var id: ObjectId = ObjectId()
     var name: String = ""
 }

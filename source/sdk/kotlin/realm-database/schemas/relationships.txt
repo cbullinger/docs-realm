@@ -1,0 +1,184 @@
+.. _kotlin-relationships:
+.. _kotlin-reference-realm-object:
+
+==========================
+Relationships - Kotlin SDK
+==========================
+
+.. contents:: On this page
+   :local:
+   :backlinks: none
+   :depth: 2
+   :class: singlecol
+
+This page describes how to define relationships between objects in your data 
+model. To learn about Realm objects and how to define them, refer to 
+:ref:`<kotlin-define-object-model>`.
+
+A relationship is an object property that references another Realm object.
+Learn more about using :ref:`Realm objects as properties 
+<kotlin-realm-objects-as-properties>`.
+
+Relationships are direct references to other objects in a realm, which
+means that you don't need bridge tables or explicit joins to define a
+relationship like you would in a relational database. Instead, you can
+access related objects by reading and writing to the property that
+defines the relationship. Realm executes read operations
+lazily, so querying objects with relationship fields doesn't slow
+queries.
+
+There are two primary types of relationships between objects:
+
+- To-One Relationship
+- To-Many Relationship
+
+.. tip:: One-to vs. Many-to Relationships
+
+   In Realm, there is no way to limit object references from
+   other objects within the same realm. As a result, there is no way to
+   restrict a relationship to "one to one/one to many" instead of "many to
+   one/many to many".
+
+You can define relationships in your object schema using the following
+types:
+
+- ``RealmObject``
+- ``RealmList <RealmObject?>``
+- ``RealmSet <RealmObject?>``
+
+You can also embed one Realm object directly within another to create a nested
+data structure using :ref:`embedded objects <kotlin-embedded-objects>`. 
+Embedded relationships have additional constraints. Refer to the 
+:ref:`Define an Embedded Relationship <kotlin-embedded-relationship>` section 
+for more information.
+
+.. _kotlin-to-one-relationship:
+
+Define a To-One Relationship
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A to-one relationship means that an object is related to no more than one 
+other object (either zero instances or one other instance of the other 
+Realm object). Nothing prevents multiple parent object instances from 
+referencing the same child instance; the distinction between a many-to-one 
+and a one-to-one relationship is up to your application.
+
+Setting a relationship field to ``null``
+removes the connection between objects, but Realm does not
+delete the referenced object.
+
+To define a one-to-one or a many-to-one relationship between objects, 
+define an object property whose type is another Realm object in your data model: 
+
+.. literalinclude:: /examples/generated/kotlin/Schema.snippet.define-to-one-relationship-property.kt
+  :language: kotlin
+  :emphasize-lines: 6-9
+
+.. _kotlin-to-many-relationship:
+
+Define a To-Many Relationship
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A to-many relationship means that an object is related in a specific way
+to multiple objects. The same object can occur in multiple to-many relationships; 
+the distinction between a many-to-many and a one-to-many relationship is up to 
+your application. 
+
+To-many relationships are represented by a collection (a :ref:`RealmList 
+<kotlin-realm-list>` or :ref:`RealmSet <kotlin-realm-set>`) of
+Realm objects and behave like a regular collection. For more information on 
+defining collections in your object model, refer to :ref:`<kotlin-define-collections>`.
+
+To define a to-many relationship between objects, define an object property 
+whose type is a ``RealmList<E>`` or ``RealmSet<E>``, where ``<E>`` is 
+another Realm object in your data model:
+
+.. literalinclude:: /examples/generated/kotlin/Schema.snippet.define-to-many-relationship-property.kt
+  :language: kotlin
+  :emphasize-lines: 5-8
+
+.. _kotlin-inverse-relationships:
+
+Define an Inverse Relationship
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+An inverse relationship (or **backlink**) links an object back to any other 
+objects that refer to it in a defined to-one or to-many relationship. 
+Relationship definitions are unidirectional, so you must explicitly define a 
+property in the object's model as an inverse relationship. For example, the 
+to-many relationship "User has many Posts" does not automatically create the 
+inverse relationship "Post belongs to User". Because relationships are 
+many-to-one or many-to-many, following inverse relationships can result in 
+zero, one, or many objects.
+
+Realm automatically updates implicit relationships whenever an
+object is added or removed in the specified relationship. You cannot manually
+add or remove items from a backlinks collection.
+
+To define an inverse relationship between objects, first define a collection 
+property in the parent object whose type is a ``RealmList<E>``, ``RealmSet<E>``, 
+or ``RealmDictionary<E>``, where ``<E>`` is another Realm object in your data 
+model:
+
+.. literalinclude:: /examples/generated/kotlin/Schema.snippet.define-inverse-property-parent.kt
+  :language: kotlin
+
+Then, provide the backlink to the parent. Define a child object with a 
+backlink property to the parent object using the 
+`backlinks() <{+kotlin-local-prefix+}io.realm.kotlin.ext/backlinks.html>`__
+method: 
+
+- For ``RealmObject`` child objects, define an immutable backlinks property of 
+  ``RealmResults`` list of the parent object type:
+
+  .. literalinclude:: /examples/generated/kotlin/Schema.snippet.define-inverse-property-children-realm-object.kt
+     :language: kotlin
+
+- For ``EmbeddedRealmObject`` child objects, define an immutable backlinks 
+  property of the parent object type:
+
+  .. literalinclude:: /examples/generated/kotlin/Schema.snippet.define-inverse-property-children-embedded-object.kt
+     :language: kotlin
+
+.. _kotlin-embedded-relationship:
+
+Define an Embedded Relationship
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Embedded relationships are similar to the to-one and to-many relationships 
+described on this page, but the relationship is between a parent object and an 
+``EmbeddedRealmObject`` type instead of a ``RealmObject``.
+
+An :ref:`embedded object <kotlin-embedded-objects>` is a special type of Realm 
+object that models complex data about a specific object. Realm treats each 
+embedded object as nested data inside of a single specific parent object.
+
+Embedded objects *cannot* exist as independent Realm objects. 
+After you :ref:`define an embedded object <kotlin-define-embedded-object>`, 
+you must define a relationship with a parent. The referenced embedded object 
+then inherits the lifecycle of its parent object, which saves you the 
+overhead of having to manually manage the lifecycle of the referenced object.
+
+.. tip:: When To Use An Embedded Relationship
+
+    Use an embedded relationship if the referenced object is only used in 
+    the context of a parent object or otherwise doesn't need to be managed 
+    independently of its parent object. 
+    
+    If you need to manually manage the lifecycle of a referenced 
+    object or want the referenced objects to persist after the deletion 
+    of the parent object, use a regular Realm object with a to-one 
+    relationship instead. 
+
+To define an embedded relationship between objects, define an object property
+whose type is an ``EmbeddedRealmObject`` already defined in your data model:
+
+.. literalinclude:: /examples/generated/kotlin/Schema.snippet.define-embedded-relationship.kt
+    :language: kotlin
+
+.. tip:: Embedded Object Types are Reusable and Composable
+
+   You can use the same embedded object type in multiple parent object types, and
+   you can embed objects inside other embedded objects. You can even
+   recursively reference an embedded object type as an optional property in its
+   own definition.
