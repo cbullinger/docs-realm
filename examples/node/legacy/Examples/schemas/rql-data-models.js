@@ -1,4 +1,4 @@
-// :snippet-start: rql-data-models
+
 const ItemModel = {
   name: "Item",
   properties: {
@@ -33,6 +33,5 @@ const ProjectModel = {
   },
   primaryKey: "id",
 };
-// :snippet-end:
 
 export { ItemModel, ProjectModel };
