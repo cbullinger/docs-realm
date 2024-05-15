@@ -10,4 +10,193 @@ Link User Identities
    :depth: 2
    :class: singlecol
 
-Placeholder page for information about linking user identities.
+.. tabs-selector:: drivers
+
+Here is some text. It displays regardless of which tab is selected.
+Tabbed content displays below. It's specific to the selected tab. This is most
+likely introductory content or conceptual information that applies to all
+languages.
+
+Page Structure
+--------------
+
+.. code-block:: none
+
+   [global content (displays regardless of tab selection)]
+
+   [tabbed content (specific to the selected tab)]
+   └─ .. tabs::
+         [each language tab] /includes/api-details/LANGUAGE/PAGE/FILE.rst
+   └── [code examples] /includes/sdk-examples/PAGE/FILE.rst
+         └─ .. tabs::
+               [each language tab] /includes/generated/LANGUAGE/FILE/SNIPPET.ext
+
+   [more global content]
+
+   [more tabbed content - no code examples]
+   └─ .. tabs::
+         [each language tab] /includes/api-details/LANGUAGE/PAGE/FILE.rst
+
+   [maybe some more global content]
+
+   ... etc.
+
+New Files to Create
+-------------------
+
+For each new consolidated page that requires tabbed content, you'll need to
+create the following:
+
+/includes/api-details/LANGUAGE/PAGE/
+   For each language that needs an ``api-details`` includes, you'll create a new
+   directory for the page, and create a new ``.rst`` file for the specific
+   content (e.g. "link-user-identities-description.rst").
+
+/includes/sdk-examples/PAGE/
+   For each section that requires language-specific code examples, you'll create
+   a new directory for the page, and create a new ``.rst`` file for the specific
+   content (e.g. "create-link-user-identities.rst").
+   This includes file defines the actual code example snippet files for each
+   language tab.
+
+/includes/generic/PAGE/
+   For content that's shared across multiple languages, you can create a generic
+   ``.rst`` file instead of defining a new file for each language. Create a new
+   directory for the page, and create a new ``.rst`` file for the shared generic
+   content (e.g. "link-user-identities-description.rst").
+
+Missing or Unsupported Content
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+/examples/MissingPlaceholders/
+   For missing code examples, use the language-specific ``example`` snippet.
+   For unsupported features/APIs, use the language-specific ``api`` snippet.
+
+.. important:: Track Missing Examples in Jira Epics
+
+   For any missing code examples, you'll also need to create a Jira ticket in the corresponding language's follow-up epic.
+
+API-Specific Details
+--------------------
+
+Here's where we start using api-specific content that's defined per language and
+displays when that language tab is selected.
+
+1. Define the ``.. tabs-drivers::`` directive (we have a handy template!)
+#. For each language tab, specify an
+   ``includes/api-details/LANGUAGE/PAGE/FILE.rst`` file as an ``.. include::``.
+   This might be a unique file or a shared generic file.
+#. If you have code examples, specify the ``includes/sdk-examples/PAGE/FILE.rst``
+   file as an ``.. include::`` just below the tabs. This file contains the
+   code example snippets for each tabbed language (we have a handy template for
+   this too!) Snooty will map each tab's
+   snippets to the corresponding API details content.
+
+API Details without Mapped Examples
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+These tabs only include ``api-details`` content. There's no corresponding
+``sdk-examples`` includes.
+
+.. tabs-drivers::
+
+   .. tab::
+      :tabid: cpp
+
+      .. include:: /includes/api-details/cpp/users/link-user-identities-not-supported.rst
+
+   .. tab::
+      :tabid: csharp
+
+      .. include:: /includes/api-details/csharp/users/link-user-identities-description.rst
+
+   .. tab::
+      :tabid: dart
+
+      .. include:: /includes/api-details/dart/users/link-user-identities-description.rst
+
+   .. tab::
+      :tabid: java
+
+      .. include:: /includes/api-details/java/users/link-user-identities-description.rst
+
+   .. tab::
+      :tabid: javascript
+
+      .. include:: /includes/api-details/javascript/users/link-user-identities-description.rst
+
+   .. tab::
+      :tabid: kotlin
+
+      .. include:: /includes/api-details/kotlin/users/link-user-identities-description.rst
+
+   .. tab::
+      :tabid: objectivec
+
+      .. include:: /includes/api-details/objectivec/users/link-user-identities-description.rst
+
+   .. tab::
+      :tabid: swift
+
+      .. include:: /includes/api-details/swift/users/link-user-identities-description.rst
+
+   .. tab::
+      :tabid: typescript
+
+      .. include:: /includes/api-details/typescript/users/link-user-identities-description.rst
+
+API Details with Mapped SDK Examples
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The following tabs use ``api-details`` with ``sdk-examples``. The content in the
+``api-details`` includes displays above the associated language's code example
+defined in the ``sdk-examples`` includes.
+
+.. tabs-drivers::
+
+   .. tab::
+      :tabid: cpp
+
+      .. include:: /includes/api-details/cpp/users/link-user-identities-not-supported.rst
+
+   .. tab::
+      :tabid: csharp
+
+      .. include:: /includes/api-details/generic/users/link-user-identities-example.rst
+
+   .. tab::
+      :tabid: dart
+
+      .. include:: /includes/api-details/generic/users/link-user-identities-example.rst
+
+   .. tab::
+      :tabid: java
+
+      .. include:: /includes/api-details/generic/users/link-user-identities-example.rst
+
+   .. tab::
+      :tabid: javascript
+
+      .. include:: /includes/api-details/generic/users/link-user-identities-example.rst
+
+   .. tab::
+      :tabid: kotlin
+
+      .. include:: /includes/api-details/generic/users/link-user-identities-example.rst
+
+   .. tab::
+      :tabid: objectivec
+
+      .. include:: /includes/api-details/generic/users/link-user-identities-example.rst
+
+   .. tab::
+      :tabid: swift
+
+      .. include:: /includes/api-details/generic/users/link-user-identities-example.rst
+
+   .. tab::
+      :tabid: typescript
+
+      .. include:: /includes/api-details/generic/users/link-user-identities-example.rst
+
+.. include:: /includes/sdk-examples/users/link-user-identities.rst
