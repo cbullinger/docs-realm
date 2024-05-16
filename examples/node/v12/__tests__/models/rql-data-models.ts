@@ -13,17 +13,11 @@ export class Item extends Realm.Object<Item> {
     name: "Item",
     properties: {
       _id: "objectId",
-      name: { type:"string", indexed: "full-text" },
+      name: { type: "string", indexed: "full-text" },
       isComplete: { type: "bool", default: false },
       assignee: "string?",
-      priority: {
-        type: "int",
-        default: 0,
-      },
-      progressMinutes: {
-        type: "int",
-        default: 0,
-      },
+      priority: { type: "int", default: 0 },
+      progressMinutes: { type: "int", default: 0 },
       projects: {
         type: "linkingObjects",
         objectType: "Project",
@@ -37,8 +31,9 @@ export class Item extends Realm.Object<Item> {
 export class Project extends Realm.Object<Project> {
   _id!: BSON.ObjectId;
   name!: string;
-  items!: Realm.List<Item>
-  quota?: number
+  items!: Realm.List<Item>;
+  quota?: number;
+  comments?: Realm.Dictionary<string>;
 
   static schema: ObjectSchema = {
     name: "Project",
@@ -47,8 +42,9 @@ export class Project extends Realm.Object<Project> {
       name: "string",
       items: "Item[]",
       quota: "int?",
+      comments: "string?{}",
     },
     primaryKey: "_id",
-  }
-};
+  };
+}
 // :snippet-end:

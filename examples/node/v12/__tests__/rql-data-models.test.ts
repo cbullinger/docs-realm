@@ -3,14 +3,10 @@ import { Item, Project } from "./models/rql-data-models.ts";
 
 describe("Test Item and Project RQL Models", () => {
   let realm: Realm;
-  const path = "testing.realm";
+  const config = { schema: [Project, Item] };
 
   beforeEach(async () => {
-    realm = await Realm.open({
-      schema: [Project, Item],
-      inMemory: true,
-      path: path,
-    });
+    realm = await Realm.open(config);
   });
 
   afterEach(() => {
@@ -25,7 +21,7 @@ describe("Test Item and Project RQL Models", () => {
   });
 
   afterAll(() => {
-    Realm.deleteFile({ path });
+    Realm.deleteFile(config);
   });
 
   test("Can open realm with config", async () => {
