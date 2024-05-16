@@ -1,4 +1,5 @@
 import Realm, { BSON, ObjectSchema } from "realm";
+
 // :snippet-start: rql-data-models
 export class Item extends Realm.Object<Item> {
   _id!: BSON.ObjectId;
@@ -51,4 +52,3 @@ export class Project extends Realm.Object<Project> {
   }
 };
 // :snippet-end:
-
