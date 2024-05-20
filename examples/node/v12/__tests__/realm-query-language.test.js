@@ -9,34 +9,42 @@ describe("Realm Query Language Reference", () => {
 
   beforeEach(async () => {
     // Before each test, open the realm and create project & item objects:
-    // 3 projects
-    // 7 items: 5 priority > 5,
-    //
+    // 2 branches, 3 projects, 7 items, 2 branches
     realm = await Realm.open(config);
 
-    realm.write(() => {
-      const mainBranch = realm.create(Office, {
+    const mainBranch = {
+      name: "Main Branch",
+      address: {
         name: "Main Branch",
-        address: {
-          name: "Main Branch",
-          street: "123 Main St",
-          zipcode: 10019,
-        },
-      });
-      const austinBranch = realm.create(Office, {
+        street: "123 Main St",
+        zipcode: 10019,
+      },
+    };
+    const austinBranch = {
+      name: "Austin Branch",
+      address: {
         name: "Austin Branch",
-        address: {
-          name: "Austin Branch",
-          street: "123 Main Ave",
-          zipcode: 10019,
-        },
+        street: "123 Main Ave",
+        zipcode: 10019,
+      },
+    };
+    realm.write(() => {
+      realm.create(Item, {
+        // Unassigned incomplete item not in any project
+        _id: new BSON.ObjectId("631a073c833a34ade21db2b2"),
+        name: "Write tests",
+        isComplete: false,
+        assignee: null,
+        priority: 10,
+        progressMinutes: 0,
       });
 
       realm.create(Project, {
         _id: new BSON.ObjectId(),
         name: "Example Project with Items",
         items: [
-          { // Alex incomplete item 
+          {
+            // Alex incomplete item
             _id: new BSON.ObjectId("631a072f75120729dc9223d9"),
             name: "Write tests",
             isComplete: false,
@@ -44,7 +52,8 @@ describe("Realm Query Language Reference", () => {
             priority: 5,
             progressMinutes: 125,
           },
-          { // Ali incomplete item
+          {
+            // Ali incomplete item
             _id: new BSON.ObjectId("631a0737c98f89f5b81cd24d"),
             name: "Run tests",
             isComplete: false,
@@ -52,41 +61,35 @@ describe("Realm Query Language Reference", () => {
             priority: 9,
             progressMinutes: 10,
           },
-          { // Unassigned incomplete item
-            _id: new BSON.ObjectId("631a073c833a34ade21db2b2"),
-            name: "Bluehawk Tests",
-            isComplete: false,
-            assignee: null,
-            priority: 10,
-            progressMinutes: 55,
-          },
         ],
         quota: 1, // doesn't meet quota
         comments: { status: "Behind schedule", projectNumber: "70150" },
         projectLocation: mainBranch,
       });
-
-      realm.create(Project, {
+      const project = realm.create(Project, {
         _id: new BSON.ObjectId(),
         name: "Project that Meets Quota",
         items: [
-          { // Complete item
+          {
+            //  Complete item used in 2 projects
+            _id: new BSON.ObjectId(),
+            name: "Approve project plan",
+            isComplete: true,
+            assignee: "Dachary",
+            priority: 1,
+            progressMinutes: 0,
+          },
+          {
+            // Complete high-priority item
             _id: new BSON.ObjectId(),
             name: "Create a ticket",
-            isComplete: true,
-            assignee: "Nick",
-            priority: 2,
-            progressMinutes: 8,
-          },
-          { // Complete high-priority item
-            _id: new BSON.ObjectId(),
-            name: "Schedule a meeting",
             isComplete: true,
             assignee: "Chris",
             priority: 9,
             progressMinutes: 10,
           },
-          { // Incomplete high-priority item
+          {
+            // Incomplete high-priority item
             _id: new BSON.ObjectId(),
             name: "Demo template app",
             isComplete: false,
@@ -104,23 +107,18 @@ describe("Realm Query Language Reference", () => {
         _id: new BSON.ObjectId(),
         name: "Project in Austin",
         items: [
-          { // Unassigned incomplete high-priority item
+          project.items[0],
+          {
+            // Incomplete high-priority item assigned to `nil` type
             _id: new BSON.ObjectId(),
             name: "Lead offsite workshop",
             isComplete: false,
-            assignee: null,
+            assignee: "nil",
             priority: 10,
             progressMinutes: 0,
           },
-          { // Complete item
-            _id: new BSON.ObjectId(),
-            name: "Schedule team lunch",
-            isComplete: true,
-            assignee: "Nick",
-            priority: 4,
-            progressMinutes: 0,
-          },
         ],
+        quota: 11, // doesn't meet quota
         comments: { status: "On track", projectNumber: "N/A" },
         projectLocation: austinBranch,
       });
@@ -164,13 +162,13 @@ describe("Realm Query Language Reference", () => {
       // :snippet-start: predicate
       const expression = "priority == 1";
       // :snippet-end:
-      expect(items.filtered(expression).length).toBe(0);
+      expect(items.filtered(expression).length).toBe(1);
     });
     test("Serialized query", () => {
       const items = realm.objects(Item);
       const query = items.filtered(
         // :snippet-start: serialized-query
-        "progressMinutes > 1 AND assignee == 'Ali''",
+        "progressMinutes > 1 AND assignee == 'Ali'"
         // :snippet end:
       );
       expect(query.length).toBe(1);
@@ -202,15 +200,15 @@ describe("Realm Query Language Reference", () => {
       expect(substitution.length).toBe(1);
     });
 
-      test("Dot notation", () => {
-        const address = realm.objects(Project);
-        const nestedMatch = address.filtered(
-          // :snippet-start: deep-dot-notation
-          "projectLocation.address.zipcode == 10019"
-          // :snippet-end:
-        );
-        expect(nestedMatch.length).toBe(3);
-      });
+    test("Dot notation", () => {
+      const address = realm.objects(Project);
+      const nestedMatch = address.filtered(
+        // :snippet-start: deep-dot-notation
+        "projectLocation.address.zipcode == 10019"
+        // :snippet-end:
+      );
+      expect(nestedMatch.length).toBe(3);
+    });
   });
 
   test("Comparison operators", () => {
@@ -260,7 +258,7 @@ describe("Realm Query Language Reference", () => {
       5
       // :remove-start:
     );
-    expect(progressMinutesRange.length).toBe(3);
+    expect(progressMinutesRange.length).toBe(2);
 
     const progressMinutesIn = items.filtered(
       // :remove-end:
@@ -296,42 +294,41 @@ describe("Realm Query Language Reference", () => {
     );
     expect(aliComplete.length).toBe(0);
     expect(alexOrAli.length).toBe(2);
-
   });
 
   describe("Arithmetic operators", () => {
-      test("Basic arithmetic", () => {
-        const items = realm.objects(Item);
-        const basicMath = items.filtered(
-          // :snippet-start: basic-arithmetic
-          "2 * priority > 6"
-          // :remove-start:
-        );
-        const lessBasicMath = items.filtered(
-          // :remove-end:
-          // Is equivalent to
-          "priority >= 2 * (2 - 1) + 2"
-          // :snippet-end:
-        );
+    test("Basic arithmetic", () => {
+      const items = realm.objects(Item);
+      const basicMath = items.filtered(
+        // :snippet-start: basic-arithmetic
+        "2 * priority > 6"
+        // :remove-start:
+      );
+      const lessBasicMath = items.filtered(
+        // :remove-end:
+        // Is equivalent to
+        "priority >= 2 * (2 - 1) + 2"
+        // :snippet-end:
+      );
 
-        expect(basicMath.length).toBe(5);
-        expect(lessBasicMath.length).toBe(5);
-      });
+      expect(basicMath.length).toBe(6);
+      expect(lessBasicMath.length).toBe(6);
+    });
 
-      test("Arithmetic with object properties", () => {
-        const items = realm.objects(Item);
-        const mathWithObjProps = items.filtered(
-          // :snippet-start: arithmetic-obj-properties
-          "progressMinutes * priority == 90"
-          // :snippet-end:
-        );
-        expect(mathWithObjProps.length).toBe(2);
-      });
+    test("Arithmetic with object properties", () => {
+      const items = realm.objects(Item);
+      const mathWithObjProps = items.filtered(
+        // :snippet-start: arithmetic-obj-properties
+        "progressMinutes * priority == 90"
+        // :snippet-end:
+      );
+      expect(mathWithObjProps.length).toBe(2);
+    });
   });
 
   describe("Type-specific operators", () => {
     test("String operators", () => {
-          const projects = realm.objects(Project);
+      const projects = realm.objects(Project);
       const startWithE = projects.filtered(
         // :snippet-start: string-operators
         // Find projects whose name starts with the letter 'e' (case-insensitive).
@@ -372,7 +369,8 @@ describe("Realm Query Language Reference", () => {
     const allItemsLowerPriority = projects.filtered(
       // :remove-end:
 
-      // Find projects with an item `priority` less than 5.
+      // Find projects with a maximum `priority` of 5 (all items must be less
+      // than 5).
       "items.@max.priority < $0",
       priorityNum
       // :remove-start:
@@ -382,12 +380,13 @@ describe("Realm Query Language Reference", () => {
     const allItemsHighPriority = projects.filtered(
       // :remove-end:
 
-      // Find projects with an item `priority` greater than 5.
+      // Find projects with a minimum `priority` of 5 (all items must be greater
+      // than 5).
       "items.@min.priority > $0",
       priorityNum
       // :remove-start:
     );
-    expect(allItemsHighPriority.length).toBe(1);
+    expect(allItemsHighPriority.length).toBe(0);
 
     const moreThan5Items = projects.filtered(
       // :remove-end:
@@ -455,7 +454,7 @@ describe("Realm Query Language Reference", () => {
         "Ali"
         // :snippet-end:
       );
-      expect(noCompleteItems.length).toBe(2);
+      expect(noCompleteItems.length).toBe(1);
       expect(anyTopPriorityItems.length).toBe(1);
       expect(allItemsCompleted.length).toBe(0);
       expect(assignedToAlexOrAli.length).toBe(1);
@@ -487,7 +486,7 @@ describe("Realm Query Language Reference", () => {
       // :snippet-end:
 
       expect(collectionQuery.length).toBe(1);
-      expect(staticQuery.length).toBe(2);
+      expect(staticQuery.length).toBe(1);
       expect(parameterizedQuery.length).toBe(3);
     });
 
@@ -515,7 +514,7 @@ describe("Realm Query Language Reference", () => {
 
       const subquery2 = projects.filtered(
         // :snippet-start: subquery-count
-        // Find projects where the number of completed to-do items 
+        // Find projects where the number of completed to-do items
         // is greater than or equal to the project's `quota` property.
         "SUBQUERY(items, $item, $item.isComplete == true).@count >= quota"
         // :snippet-end:
@@ -524,339 +523,297 @@ describe("Realm Query Language Reference", () => {
       expect(subquery2[0].name).toBe("Project that Meets Quota");
     });
 
-      test("Dictionary operators", () => {
-        const dictionaries = realm.objects(Project);
+    test("Dictionary operators", () => {
+      const dictionaries = realm.objects(Project);
 
-        const statusKey = dictionaries.filtered(
+      const statusKey = dictionaries.filtered(
         // :snippet-start: dictionary-operators
-          // Finds `comments` dictionary properties with key 'status'
-          "comments.@keys == $0", "status"
+        // Finds `comments` dictionary properties with key 'status'
+        "comments.@keys == $0",
+        "status"
 
         // :remove-start:
-        );
-        const statusOnTrack = dictionaries.filtered(
+      );
+      const statusOnTrack = dictionaries.filtered(
         // :remove-end:
-          // Find `comments` dictionary properties with key 'status'
-          // and value 'On track'
-          "comments['status'] == $0", "On track"
+        // Find `comments` dictionary properties with key 'status'
+        // and value 'On track'
+        "comments['status'] == $0",
+        "On track"
         // :remove-start:
-        );
-        const numItemsInDict = dictionaries.filtered(
+      );
+      const numItemsInDict = dictionaries.filtered(
         // :remove-end:
-          // Finds `comments` dictionary properties with
-          // more than one key-value pair
-          "comments.@count > $0", 1
+        // Finds `comments` dictionary properties with
+        // more than one key-value pair
+        "comments.@count > $0",
+        1
 
         // :remove-start:
-        );
+      );
 
-        const hasString = dictionaries.filtered(
-          // :remove-end:
-          //Find `comments` dictionary properties where ANY
-          // values are of type 'string`
-          "ANY comments.@type == 'string'"
-          // :remove-start:
-        );
+      const hasString = dictionaries.filtered(
+        // :remove-end:
+        //Find `comments` dictionary properties where ANY
+        // values are of type 'string`
+        "ANY comments.@type == 'string'"
+        // :remove-start:
+      );
 
-        const hasStringImplied = dictionaries.filtered(
-          // :remove-end:
-          "comments.@type == 'string'" // (Equivalent - ANY is implied.)
+      const hasStringImplied = dictionaries.filtered(
+        // :remove-end:
+        "comments.@type == 'string'" // (Equivalent - ANY is implied.)
 
-          // :remove-start:
-        );
+        // :remove-start:
+      );
 
-        const allInt = dictionaries.filtered(
-          // :remove-end:
-          // Finds `comments` dictionary properties where ALL
-          // values are of type 'int'
-          "ALL comments.@type == 'int'"
+      const allInt = dictionaries.filtered(
+        // :remove-end:
+        // Finds `comments` dictionary properties where ALL
+        // values are of type 'int'
+        "ALL comments.@type == 'int'"
 
-          // :remove-start:
-        );
+        // :remove-start:
+      );
 
-        const noInts = dictionaries.filtered(
-          // :remove-end:
-          // Finds `comments` dictionary properties where NO
-          // values are of type 'int'
-          "NONE comments.@type == 'int'"
+      const noInts = dictionaries.filtered(
+        // :remove-end:
+        // Finds `comments` dictionary properties where NO
+        // values are of type 'int'
+        "NONE comments.@type == 'int'"
 
-          // :remove-start:
-        );
+        // :remove-start:
+      );
 
-        expect(statusKey.length).toBe(3);
-        expect(statusOnTrack.length).toBe(1);
-        expect(numItemsInDict.length).toBe(3);
-        expect(hasString.length).toBe(3);
-        expect(hasStringImplied.length).toBe(3);
-        expect(allInt.length).toBe(0);
-        expect(noInts.length).toBe(3);
-      });
+      expect(statusKey.length).toBe(3);
+      expect(statusOnTrack.length).toBe(1);
+      expect(numItemsInDict.length).toBe(3);
+      expect(hasString.length).toBe(3);
+      expect(hasStringImplied.length).toBe(3);
+      expect(allInt.length).toBe(0);
+      expect(noInts.length).toBe(3);
+    });
   });
 
-  // describe("Backlink queries", () => {
-  //   test("dot-notation", () => {
-  //     const atLinksResult = realm.objects(Item).filtered(
-  //       // :snippet-start: backlinks-atLinks
-  //       // Find items that belong to a project with a quota greater than 10 (@links)
-  //       "@links.Project.items.quota > 10"
-  //       // :snippet-end:
-  //     );
-  //     expect(atLinksResult.length).toBe(3);
-  //     expect(atLinksResult[0].name).toBe("Create a ticket");
+  describe("Backlinks queries", () => {
+    test("Backlinks query @links", () => {
+      const atLinksResult = realm.objects(Item).filtered(
+        // :snippet-start: backlinks-atLinks
+        // Find items that belong to a project with a quota less than 10 (@links)
+        "@links.Project.items.quota < 10"
+        // :snippet-end:
+      );
+      expect(atLinksResult.length).toBe(5);
 
-  //     const linkingObjectsResult = realm.objects(Item).filtered(
-  //       // :snippet-start: backlinks-linkingObjects
-  //       // Find items that belong to a project with a quota greater than 10 (LinkingObjects)
-  //       "projects.quota > 10"
-  //       // :snippet-end:
-  //     );
-  //     expect(linkingObjectsResult.length).toBe(3);
-  //     expect(linkingObjectsResult[0].name).toBe("Create a ticket");
-  //   });
+      const linkingObjectsResult = realm.objects(Item).filtered(
+        // :snippet-start: backlinks-linkingObjects
+        // Find items that belong to a project with a quota greater than 10 (LinkingObjects)
+        "projects.quota > 10"
+        // :snippet-end:
+      );
+      expect(linkingObjectsResult.length).toBe(2);
+    });
 
-  //   test("collection operators", () => {
-  //     const anyResult = realm.objects(Item).filtered(
-  //       // :snippet-start: backlinks-collection-operators
-  //       // Find items where any project that references the item has a quota greater than 0
-  //       "ANY @links.Project.items.quota > 0"
-  //       // :remove-start:
-  //     );
-  //     expect(anyResult.length).toBe(3);
-  //     expect(anyResult[0].name).toBe("Create a ticket");
+    test("Backlinks collection operators", () => {
+      const anyResult = realm.objects(Item).filtered(
+        // :snippet-start: backlinks-collection-operators
+        // Find items where any project that references the item has a quota greater than 10.
+        "ANY @links.Project.items.quota > 10"
+        // :remove-start:
+      );
+      expect(anyResult.length).toBe(2);
 
-  //     const allResult = realm.objects(Item).filtered(
-  //       // :remove-end:
-  //       // Find items where all projects that reference the item have a quota greater than 0
-  //       "ALL @links.Project.items.quota > 0"
-  //       // :snippet-end:
-  //     );
-  //     expect(allResult.length).toBe(3);
-  //     expect(allResult[0].name).toBe("Create a ticket");
-  //   });
+      const allResult = realm.objects(Item).filtered(
+        // :remove-end:
+        // Find items where all projects that reference the item have a quota
+        // less than 5.
+        "ALL @links.Project.items.quota < 5"
+        // :snippet-end:
+      );
+      expect(allResult.length).toBe(5);
+    });
 
-  //   test("aggregate operators", () => {
-  //     const shallowResultLinkingObjects = realm.objects(Item).filtered(
-  //       // :snippet-start: backlinks-aggregate-operators
-  //       // Find items that are referenced by multiple projects
-  //       "projects.@count > 1"
-  //       // :remove-start:
-  //     );
-  //     expect(shallowResultLinkingObjects.length).toBe(1);
-  //     expect(shallowResultLinkingObjects[0].name).toBe("Get coffee");
+    test("Backlinks aggregate operators", () => {
+      const shallowResultLinkingObjects = realm.objects(Item).filtered(
+        // :snippet-start: backlinks-aggregate-operators
+        // Find items that are referenced by multiple projects
+        "projects.@count > 1"
+        // :remove-start:
+      );
+      expect(shallowResultLinkingObjects.length).toBe(1);
+      expect(shallowResultLinkingObjects[0].name).toBe("Approve project plan");
 
-  //     const shallowResultAtLinks = realm.objects(Item).filtered(
-  //       // :remove-end:
-  //       // Find items that are not referenced by any project
-  //       "@links.Project.items.@count == 0"
-  //       // :remove-start:
-  //     );
-  //     expect(shallowResultAtLinks.length).toBe(1);
-  //     expect(shallowResultAtLinks[0].name).toBe("Assign me to a project");
+      const shallowResultAtLinks = realm.objects(Item).filtered(
+        // :remove-end:
+        // Find items that are not referenced by any project
+        "@links.Project.items.@count == 0"
+        // :remove-start:
+      );
+      expect(shallowResultAtLinks.length).toBe(1);
+      expect(shallowResultAtLinks[0].name).toBe("Write tests");
 
-  //     const deepResultAtLinks = realm.objects(Item).filtered(
-  //       // :remove-end:
-  //       // Find items that belong to a project where the average item has
-  //       // been worked on for at least 5 minutes
-  //       "@links.Project.items.items.@avg.progressMinutes > 10"
-  //       // :snippet-end:
-  //     );
-  //     expect(deepResultAtLinks.length).toBe(3);
-  //     expect(deepResultAtLinks[0].name).toBe("Write tests");
-  //   });
+      const deepResultAtLinks = realm.objects(Item).filtered(
+        // :remove-end:
+        // Find items that belong to a project where the average item has
+        // been worked on for at least 5 minutes
+        "@links.Project.items.items.@avg.progressMinutes > 10"
+        // :snippet-end:
+      );
+      expect(deepResultAtLinks.length).toBe(2);
+      expect(deepResultAtLinks[0].name).toBe("Write tests");
+    });
 
-  //   test("count all backlinks (@links.@count)", () => {
-  //     const result = realm.objects(Item).filtered(
-  //       // :snippet-start: backlinks-atCount
-  //       // Find items that are not referenced by another object of any type
-  //       "@links.@count == 0"
-  //       // :snippet-end:
-  //     );
-  //     expect(result.length).toBe(1);
-  //     expect(result[0].name).toBe("Assign me to a project");
-  //   });
-  // });
+    test("Count all backlinks (@links.@count)", () => {
+      const result = realm.objects(Item).filtered(
+        // :snippet-start: backlinks-atCount
+        // Find items that are not referenced by another object of any type
+        "@links.@count == 0"
+        // :snippet-end:
+      );
+      expect(result.length).toBe(1);
+      expect(result[0].name).toBe("Write tests");
+    });
+  });
 
+  describe("Type operator", () => {
+    // Uses a test-specific schema with mixed type
+    // TODO: Update main schema with mixed type property once collections-in-mixed is supported
+    const Mixed = {
+      name: "Mixed",
+      properties: { name: "string", mixedType: "mixed" },
+    };
+    let realm;
+    const path = "mixed.realm";
 
+    // Add, then delete objects for this test
+    beforeEach(async () => {
+      realm = await Realm.open({
+        schema: [Mixed],
+        path,
+      });
+      realm.write(() => {
+        realm.create("Mixed", {
+          name: "Marge",
+          mixedType: true,
+        });
+        realm.create("Mixed", {
+          name: "Lisa",
+          mixedType: 22,
+        });
+        realm.create("Mixed", {
+          name: "Bart",
+          mixedType: "carrumba",
+        });
+      });
+    });
 
+    afterEach(() => {
+      realm.close();
+      Realm.deleteFile({ path });
+    });
 
+    test("Type operator", () => {
+      const mixed = realm.objects("Mixed");
+      const mixedString = mixed.filtered(
+        // :snippet-start: type-operator
+        "mixedType.@type == 'string'"
+        // :remove-start:
+      );
+      const mixedBool = mixed.filtered(
+        // :remove-end:
 
-  // describe("ObjectId and UUID tests", () => {
-  //   const OidUuid = {
-  //     name: "OidUuid",
-  //     properties: { id: "uuid", _id: "objectId" },
-  //   };
-  //   let realm;
-  //   const path = "oidUuid.realm";
-  //   const oidValueString = "6001c033600510df3bbfd864";
-  //   const uuid1String = "d1b186e1-e9e0-4768-a1a7-c492519d47ee";
-  //   const oidValue = new BSON.ObjectId(oidValueString);
-  //   const uuid1 = new BSON.UUID(uuid1String);
-  //   beforeAll(async () => {
-  //     realm = await Realm.open({ schema: [OidUuid], path });
-  //     const obj1 = {
-  //       _id: oidValue,
-  //       id: uuid1,
-  //     };
-  //     const obj2 = {
-  //       _id: new BSON.ObjectId(),
-  //       id: new BSON.UUID(),
-  //     };
-  //     realm.write(() => {
-  //       realm.create("OidUuid", obj1);
-  //       realm.create("OidUuid", obj2);
-  //     });
-  //   });
-  //   afterAll(() => {
-  //     realm.close();
-  //     Realm.deleteFile({ path });
-  //   });
+        "mixedType.@type == 'bool'"
+        // :snippet-end:
+      );
+      expect(mixedString.length).toBe(1);
+      expect(mixedBool.length).toBe(1);
+    });
+  });
 
-  //   test("ObjectId Operator", () => {
-  //     const oidUuids = realm.objects("OidUuid");
-  //     const oidStringLiteral = oidUuids.filtered(
-  //       // :snippet-start: oid
-  //       "_id == oid(6001c033600510df3bbfd864)"
-  //       // :snippet-end:
-  //     );
-  //     // prettier-ignore
-  //     const oidInterpolation = oidUuids.filtered(
-  //       // :snippet-start:oid-literal
-  //       "_id == $0", oidValue
-  //       // :snippet-end:
-  //     );
+  test("Nil type", () => {
+    const items = realm.objects(Item);
+    const res = items.filtered(
+      // :snippet-start: nil-type
+      "assignee == nil"
+      // :snippet-end:
+    );
 
-  //     expect(oidStringLiteral.length).toBe(1);
-  //     expect(oidInterpolation.length).toBe(1);
-  //   });
-  //   test("UUID Operator", () => {
-  //     const oidUuids = realm.objects("OidUuid");
-  //     const uuid = oidUuids.filtered(
-  //       // :snippet-start: uuid
-  //       "id == uuid(d1b186e1-e9e0-4768-a1a7-c492519d47ee)"
-  //       // :snippet-end:
-  //     );
-  //     expect(uuid.length).toBe(1);
-  //   });
-  // });
+    const res2 = realm.objects(Item).filtered(
+      // :snippet-start: nil-type-parameterized-query
+      // comparison to language null pointer
+      "assignee == $0",
+      null
+      // :snippet-end:
+    );
 
-  // describe("Dot notation", () => {
-  //   const Address = {
-  //     name: "Address",
-  //     properties: { zipcode: "int" },
-  //   };
-  //   const Workplace = {
-  //     name: "Workplace",
-  //     properties: { address: "Address" },
-  //   };
-  //   const Employee = {
-  //     name: "Employee",
-  //     properties: { name: "string", workplace: "Workplace" },
-  //   };
+    expect(res.length).toBe(1);
+    expect(res2.length).toBe(1);
+  });
 
-  //   let realm;
-  //   const path = "employee.realm";
-  //   beforeAll(async () => {
-  //     realm = await Realm.open({
-  //       schema: [Employee, Address, Workplace],
-  //       path,
-  //     });
-  //     realm.write(() => {
-  //       realm.create("Employee", {
-  //         name: "Homer",
-  //         workplace: {
-  //           address: {
-  //             zipcode: 10019,
-  //           },
-  //         },
-  //       });
-  //     });
-  //   });
-  //   afterAll(() => {
-  //     realm.close();
-  //     Realm.deleteFile({ path });
-  //   });
+  describe("ObjectId and UUID queries", () => {
+    // Uses a test-specific schema with id types
+    const OidUuid = {
+      name: "OidUuid",
+      properties: { id: "uuid", _id: "objectId" },
+    };
 
-  // });
+    let realm;
+    const path = "oidUuid.realm";
 
-  // test("Nil type", () => {
-  //   const name = "take a loooong nap";
-  //   const takeANap = {
-  //     id: new BSON.ObjectId(),
-  //     name,
-  //     isComplete: false,
-  //     priority: 1,
-  //     progressMinutes: 12,
-  //   };
-  //   realm.write(() => {
-  //     realm.create(Item, takeANap);
-  //   });
-  //   const res = realm.objects(Item).filtered(
-  //     // :snippet-start: nil-type
-  //     "assignee == nil"
-  //     // :snippet-end:
-  //   );
+    const oidValueString = "6001c033600510df3bbfd864";
+    const uuid1String = "d1b186e1-e9e0-4768-a1a7-c492519d47ee";
+    const oidValue = new BSON.ObjectId(oidValueString);
+    const uuid1 = new BSON.UUID(uuid1String);
 
-  //   // prettier-ignore
-  //   const res2 = realm.objects(Item).filtered(
-  //     // :snippet-start: nil-type-parameterized-query
-  //     // comparison to language null pointer
-  //     "assignee == $0", null
-  //     // :snippet-end:
-  //   );
+    // Add, then delete objects for this test
+    beforeEach(async () => {
+      realm = await Realm.open({ schema: [OidUuid], path });
+      const obj1 = {
+        _id: oidValue,
+        id: uuid1,
+      };
+      const obj2 = {
+        _id: new BSON.ObjectId(),
+        id: new BSON.UUID(),
+      };
+      realm.write(() => {
+        realm.create("OidUuid", obj1);
+        realm.create("OidUuid", obj2);
+      });
+    });
 
-  //   expect(res.filter(({ name: objName }) => objName === name).length).toBe(1);
-  //   expect(res2.filter(({ name: objName }) => objName === name).length).toBe(1);
-  // });
+    afterEach(() => {
+      realm.close();
+      Realm.deleteFile({ path });
+    });
 
-  // describe("Type operator", () => {
-  //   const Mixed = {
-  //     name: "Mixed",
-  //     properties: { name: "string", mixedType: "mixed" },
-  //   };
+    test("ObjectId Operator", () => {
+      const oidUuids = realm.objects("OidUuid");
+      const oidStringLiteral = oidUuids.filtered(
+        // :snippet-start: oid
+        "_id == oid(6001c033600510df3bbfd864)"
+        // :snippet-end:
+      );
+      const oidInterpolation = oidUuids.filtered(
+        // :snippet-start:oid-literal
+        "_id == $0",
+        oidValue
+        // :snippet-end:
+      );
 
-  //   let realm;
-  //   const path = "mixed.realm";
-  //   beforeAll(async () => {
-  //     realm = await Realm.open({
-  //       schema: [Mixed],
-  //       path,
-  //     });
-  //     realm.write(() => {
-  //       realm.create("Mixed", {
-  //         name: "Marge",
-  //         mixedType: true,
-  //       });
-  //       realm.create("Mixed", {
-  //         name: "Lisa",
-  //         mixedType: 22,
-  //       });
-  //       realm.create("Mixed", {
-  //         name: "Bart",
-  //         mixedType: "carrumba",
-  //       });
-  //     });
-  //   });
-  //   afterAll(() => {
-  //     realm.close();
-  //     Realm.deleteFile({ path });
-  //   });
-  //   test("Type operator", () => {
-  //     const mixed = realm.objects("Mixed");
-  //     const mixedString = mixed.filtered(
-  //       // :snippet-start: type-operator
-  //       "mixedType.@type == 'string'"
-  //       // :remove-start:
-  //     );
-  //     const mixedBool = mixed.filtered(
-  //       // :remove-end:
-
-  //       "mixedType.@type == 'bool'"
-  //       // :snippet-end:
-  //     );
-  //     expect(mixedString.length).toBe(1);
-  //     expect(mixedBool.length).toBe(1);
-  //   });
-  // });
+      expect(oidStringLiteral.length).toBe(1);
+      expect(oidInterpolation.length).toBe(1);
+    });
+    test("UUID Operator", () => {
+      const oidUuids = realm.objects("OidUuid");
+      const uuid = oidUuids.filtered(
+        // :snippet-start: uuid
+        "id == uuid(d1b186e1-e9e0-4768-a1a7-c492519d47ee)"
+        // :snippet-end:
+      );
+      expect(uuid.length).toBe(1);
+    });
+  });
 
   describe("Date queries", () => {
     // Uses a test-specific schema with Date type
@@ -906,7 +863,8 @@ describe("Realm Query Language Reference", () => {
       const dateParameterizedQuery = dates.filtered(
         // :snippet-start: date-parameterized-query
         // Find to-do items completed before today's date.
-        "dateCompleted < $0", today
+        "dateCompleted < $0",
+        today
 
         // :remove-start:
       );
@@ -914,7 +872,9 @@ describe("Realm Query Language Reference", () => {
       const dateAlt1 = dates.filtered(
         // :remove-end:
         // Find to-do items completed this year up to today.
-        "dateCompleted > $0 AND dateCompleted < $1", thisYear, today
+        "dateCompleted > $0 AND dateCompleted < $1",
+        thisYear,
+        today
         // :snippet-end:
       );
 
@@ -923,37 +883,37 @@ describe("Realm Query Language Reference", () => {
     });
   });
 
-  // test("full-text search", () => {
-  //   const items = realm.objects(Item);
+  test("Full-text search (FTS) query", () => {
+    const items = realm.objects(Item);
 
-  //   const itemsWithWrite = items.filtered(
-  //     // :snippet-start: rql-fts
-  //     // Filter for items with 'write' in the name
-  //     "name TEXT $0",
-  //     "write"
+    const itemsWithWrite = items.filtered(
+      // :snippet-start: rql-fts
+      // Filter for items with 'write' in the name
+      "name TEXT $0",
+      "write"
 
-  //     // :remove-start:
-  //   );
+      // :remove-start:
+    );
 
-  //   const itemsWithWriteNotTest = items.filtered(
-  //     // :remove-end:
-  //     // Find items with 'write' but not 'tests' using '-'
-  //     "name TEXT $0",
-  //     "write -tests"
+    const itemsWithWriteNotTest = items.filtered(
+      // :remove-end:
+      // Find items with 'write' but not 'tests' using '-'
+      "name TEXT $0",
+      "write -tests"
 
-  //     // :remove-start:
-  //   );
+      // :remove-start:
+    );
 
-  //   const itemsStartingWithWri = items.filtered(
-  //     // :remove-end:
-  //     // Find items starting with 'wri-' using '*'
-  //     "name TEXT $0",
-  //     "wri*"
-  //     // :snippet-end:
-  //   );
+    const itemsStartingWithWri = items.filtered(
+      // :remove-end:
+      // Find items starting with 'wri-' using '*'
+      "name TEXT $0",
+      "wri*"
+      // :snippet-end:
+    );
 
-  //   expect(itemsWithWrite.length).toBe(1);
-  //   expect(itemsWithWriteNotTest.length).toBe(0);
-  //   expect(itemsStartingWithWri.length).toBe(1);
-  // });
+    expect(itemsWithWrite.length).toBe(2);
+    expect(itemsWithWriteNotTest.length).toBe(0);
+    expect(itemsStartingWithWri.length).toBe(2);
+  });
 });
