@@ -1,22 +1,42 @@
 /* eslint-disable prettier/prettier */
 import Realm, { BSON } from "realm";
-import { Item, Project } from "./models/rql-data-models.ts";
-import { describe } from "@jest/globals";
+import { Address, Item, Office, Project } from "./models/rql-data-models.ts";
+import { describe, expect } from "@jest/globals";
 
 describe("Realm Query Language Reference", () => {
   let realm;
-  const config = { schema: [Project, Item] };
+  const config = { schema: [Project, Item, Address, Office] };
 
   beforeEach(async () => {
-    // Before each test, open the realm and create project & item objects
+    // Before each test, open the realm and create project & item objects:
+    // 3 projects
+    // 7 items: 5 priority > 5,
+    //
     realm = await Realm.open(config);
 
     realm.write(() => {
-      const project1 = realm.create(Project, {
+      const mainBranch = realm.create(Office, {
+        name: "Main Branch",
+        address: {
+          name: "Main Branch",
+          street: "123 Main St",
+          zipcode: 10019,
+        },
+      });
+      const austinBranch = realm.create(Office, {
+        name: "Austin Branch",
+        address: {
+          name: "Austin Branch",
+          street: "123 Main Ave",
+          zipcode: 10019,
+        },
+      });
+
+      realm.create(Project, {
         _id: new BSON.ObjectId(),
         name: "Example Project with Items",
         items: [
-          {
+          { // Alex incomplete item 
             _id: new BSON.ObjectId("631a072f75120729dc9223d9"),
             name: "Write tests",
             isComplete: false,
@@ -24,7 +44,7 @@ describe("Realm Query Language Reference", () => {
             priority: 5,
             progressMinutes: 125,
           },
-          {
+          { // Ali incomplete item
             _id: new BSON.ObjectId("631a0737c98f89f5b81cd24d"),
             name: "Run tests",
             isComplete: false,
@@ -32,7 +52,7 @@ describe("Realm Query Language Reference", () => {
             priority: 9,
             progressMinutes: 10,
           },
-          {
+          { // Unassigned incomplete item
             _id: new BSON.ObjectId("631a073c833a34ade21db2b2"),
             name: "Bluehawk Tests",
             isComplete: false,
@@ -41,16 +61,16 @@ describe("Realm Query Language Reference", () => {
             progressMinutes: 55,
           },
         ],
-        quota: 10,
-        Comments: { CheckIn: "On Track" },
+        quota: 1, // doesn't meet quota
+        comments: { status: "Behind schedule", projectNumber: "70150" },
+        projectLocation: mainBranch,
       });
 
-      const project2 = realm.create(Project, {
+      realm.create(Project, {
         _id: new BSON.ObjectId(),
-        name: "Project with High Quota",
-        quota: 12,
+        name: "Project that Meets Quota",
         items: [
-          {
+          { // Complete item
             _id: new BSON.ObjectId(),
             name: "Create a ticket",
             isComplete: true,
@@ -58,7 +78,7 @@ describe("Realm Query Language Reference", () => {
             priority: 2,
             progressMinutes: 8,
           },
-          {
+          { // Complete high-priority item
             _id: new BSON.ObjectId(),
             name: "Schedule a meeting",
             isComplete: true,
@@ -66,7 +86,7 @@ describe("Realm Query Language Reference", () => {
             priority: 9,
             progressMinutes: 10,
           },
-          {
+          { // Incomplete high-priority item
             _id: new BSON.ObjectId(),
             name: "Demo template app",
             isComplete: false,
@@ -75,23 +95,34 @@ describe("Realm Query Language Reference", () => {
             progressMinutes: 3,
           },
         ],
+        quota: 1, // meets quota
+        comments: { status: "Ahead of schedule", projectNumber: "70187" },
+        projectLocation: mainBranch,
       });
 
-      const newItem = realm.create(Item, {
+      realm.create(Project, {
         _id: new BSON.ObjectId(),
-        name: "Ask the Chatbot",
-        isComplete: false,
-        assignee: "Nick",
-        priority: 2,
-        progressMinutes: 0,
-      });
-
-      const project3 = realm.create(Project, {
-        _id: new BSON.ObjectId(),
-        name: "Project with Low Quota",
-        items: [project2.items[2], newItem],
-        quota: 1,
-        comments: { CheckIn: "Behind Schedule" },
+        name: "Project in Austin",
+        items: [
+          { // Unassigned incomplete high-priority item
+            _id: new BSON.ObjectId(),
+            name: "Lead offsite workshop",
+            isComplete: false,
+            assignee: null,
+            priority: 10,
+            progressMinutes: 0,
+          },
+          { // Complete item
+            _id: new BSON.ObjectId(),
+            name: "Schedule team lunch",
+            isComplete: true,
+            assignee: "Nick",
+            priority: 4,
+            progressMinutes: 0,
+          },
+        ],
+        comments: { status: "On track", projectNumber: "N/A" },
+        projectLocation: austinBranch,
       });
     });
   });
@@ -118,34 +149,90 @@ describe("Realm Query Language Reference", () => {
   });
 
   test("Simple query", () => {
+    // NOTE: used on Query Data page, not RQL
     // :snippet-start: simple-query
     const items = realm.objects(Item);
     // Get all items where 'priority' property is 7 or more.
     const importantItems = items.filtered("priority >= $0", 7);
     // :snippet-end:
-    expect(importantItems.length).toEqual(4);
+    expect(importantItems.length).toEqual(5);
   });
 
-  test("Comparison queries", () => {
+  describe("Basic syntax", () => {
+    test("Expression query", () => {
+      const items = realm.objects(Item);
+      // :snippet-start: predicate
+      const expression = "priority == 1";
+      // :snippet-end:
+      expect(items.filtered(expression).length).toBe(0);
+    });
+    test("Serialized query", () => {
+      const items = realm.objects(Item);
+      const query = items.filtered(
+        // :snippet-start: serialized-query
+        "progressMinutes > 1 AND assignee == 'Ali''",
+        // :snippet end:
+      );
+      expect(query.length).toBe(1);
+    });
+    test("Parameterized query", () => {
+      const items = realm.objects(Item);
+      const substitution = items.filtered(
+        // :snippet-start: parameterized-query
+        // Include one parameter with `$0`.
+        "progressMinutes > 1 AND assignee == $0",
+        "Ali"
+        // :remove-start:
+      );
+      expect(substitution.length).toBe(1);
+    });
+
+    test("Multiple parameterized query", () => {
+      const items = realm.objects(Item);
+      const substitution = items.filtered(
+        // :remove-end:
+
+        // Include multiple parameters using ascending integers,
+        // starting at`$0`.
+        "progressMinutes > $0 AND assignee == $1",
+        1,
+        "Alex"
+        // :snippet-end:
+      );
+      expect(substitution.length).toBe(1);
+    });
+
+      test("Dot notation", () => {
+        const address = realm.objects(Project);
+        const nestedMatch = address.filtered(
+          // :snippet-start: deep-dot-notation
+          "projectLocation.address.zipcode == 10019"
+          // :snippet-end:
+        );
+        expect(nestedMatch.length).toBe(3);
+      });
+  });
+
+  test("Comparison operators", () => {
     const items = realm.objects(Item);
 
     const highPriorityItems = items.filtered(
       // :snippet-start: comparison-operators
       // Find high-priority to-do items:
-      // Compare `priority` property values against a threshold value,
+      // Compare `priority` values against a threshold value,
       // above which is considered high.
       "priority > $0",
       5
       // :remove-start:
     );
-    expect(highPriorityItems.length).toBe(4);
+    expect(highPriorityItems.length).toBe(5);
 
     const longRunningItems = items.filtered(
       // :remove-end:
 
       // Find long-running to-do items:
-      // Compare `progressMinutes` property values against a threshold value,
-      // where items at or above are considered long-running.
+      // Compare `progressMinutes` values against a threshold value,
+      // where items at or above are considered long running.
       "progressMinutes > $0",
       120
       // :remove-start:
@@ -156,7 +243,7 @@ describe("Realm Query Language Reference", () => {
       // :remove-end:
 
       // Find unassigned to-do items:
-      // Compare `assignee` property value to `null` value.
+      // Compare `assignee` values to `null` value.
       "assignee == $0",
       null
       // :remove-start:
@@ -166,64 +253,104 @@ describe("Realm Query Language Reference", () => {
     const progressMinutesRange = items.filtered(
       // :remove-end:
 
-      // Find to-do items within a certain time range:
-      // Compare `progressMinutes` property values against a range of two values.
-      "progressMinutes BETWEEN { $0 , $1 }",
-      30,
-      60
+      // Find low-priority to-do items:
+      // Compare `priority` values against an inclusive range of values.
+      "priority BETWEEN { $0 , $1 }",
+      1,
+      5
       // :remove-start:
     );
-    expect(progressMinutesRange.length).toBe(1);
+    expect(progressMinutesRange.length).toBe(3);
 
     const progressMinutesIn = items.filtered(
       // :remove-end:
 
-      // Find in-progress to-do items:
-      // Compare `progressMinutes` property values against listed values.
-      "progressMinutes IN { $0, $1, $2, $3, $4, $5 }",
+      // Find to-do items with specific progress times:
+      // Compare `progressMinutes` values against any of the listed values.
+      "progressMinutes IN { $0, $1, $2 }",
       10,
-      20,
       30,
-      40,
-      50,
       60
       // :snippet-end:
     );
     expect(progressMinutesIn.length).toBe(2);
   });
 
-  test("Logic queries", () => {
+  test("Logical operators", () => {
     const items = realm.objects(Item);
-    const projects = realm.objects(Project);
-
     const aliComplete = items.filtered(
       // :snippet-start: logical-operators
-      // Find all of Ali's completed to-do items.
+      // Find all to-do items assigned to Ali AND are completed.
       "assignee == $0 AND isComplete == $1",
       "Ali",
       true
+      // :remove-start:
+    );
+    const alexOrAli = items.filtered(
+      // :remove-end:
+      // Find all to-do items assigned to Alex OR to Ali.
+      "assignee == $0 OR assignee == $1",
+      "Alex",
+      "Ali"
       // :snippet-end:
     );
     expect(aliComplete.length).toBe(0);
+    expect(alexOrAli.length).toBe(2);
 
-    const startWithE = projects.filtered(
-      // :snippet-start: string-operators
-      // Find projects whose name starts with the letter 'e' (case-insensitive).
-      "name BEGINSWITH[c] $0",
-      "e"
-      // :remove-start:
-    );
-    expect(startWithE.length).toBe(1);
+  });
 
-    const containIe = projects.filtered(
-      // :remove-end:
+  describe("Arithmetic operators", () => {
+      test("Basic arithmetic", () => {
+        const items = realm.objects(Item);
+        const basicMath = items.filtered(
+          // :snippet-start: basic-arithmetic
+          "2 * priority > 6"
+          // :remove-start:
+        );
+        const lessBasicMath = items.filtered(
+          // :remove-end:
+          // Is equivalent to
+          "priority >= 2 * (2 - 1) + 2"
+          // :snippet-end:
+        );
 
-      // Find projects whose name contains the letters 'ie' (case-sensitive).
-      "name CONTAINS $0",
-      "ie"
-      // :snippet-end:
-    );
-    expect(containIe.length).toBe(0);
+        expect(basicMath.length).toBe(5);
+        expect(lessBasicMath.length).toBe(5);
+      });
+
+      test("Arithmetic with object properties", () => {
+        const items = realm.objects(Item);
+        const mathWithObjProps = items.filtered(
+          // :snippet-start: arithmetic-obj-properties
+          "progressMinutes * priority == 90"
+          // :snippet-end:
+        );
+        expect(mathWithObjProps.length).toBe(2);
+      });
+  });
+
+  describe("Type-specific operators", () => {
+    test("String operators", () => {
+          const projects = realm.objects(Project);
+      const startWithE = projects.filtered(
+        // :snippet-start: string-operators
+        // Find projects whose name starts with the letter 'e' (case-insensitive).
+        "name BEGINSWITH[c] $0",
+        "e"
+        // :remove-start:
+      );
+      expect(startWithE.length).toBe(1);
+
+      const containIe = projects.filtered(
+        // :remove-end:
+
+        // Find projects whose name contains the letters 'ie' (case-sensitive).
+        "name CONTAINS $0",
+        "ie"
+        // :snippet-end:
+      );
+      expect(containIe.length).toBe(0);
+    });
   });
 
   test("Aggregate queries", () => {
@@ -375,173 +502,96 @@ describe("Realm Query Language Reference", () => {
       expect(sortedUniqueAliItems.length).toBe(1);
     });
 
-    // test("subquery queries", () => {
-    //   realm.write(() => {
-    //     realm.create(Project, {
-    //       id: new BSON.ObjectId(),
-    //       name: "Project with Quota",
-    //       quota: 2,
-    //       items: [
-    //         {
-    //           id: new BSON.ObjectId(),
-    //           name: "Write tests",
-    //           isComplete: true,
-    //           assignee: "Alex",
-    //           priority: 5,
-    //           progressMinutes: 125,
-    //         },
-    //         {
-    //           id: new BSON.ObjectId(),
-    //           name: "Run tests",
-    //           isComplete: true,
-    //           assignee: "Ali",
-    //           priority: 9,
-    //           progressMinutes: 10,
-    //         },
-    //         {
-    //           id: new BSON.ObjectId(),
-    //           name: "Bluehawk Tests",
-    //           isComplete: false,
-    //           assignee: null,
-    //           priority: 10,
-    //           progressMinutes: 55,
-    //         },
-    //       ],
-    //     });
-    //   });
-    //   const projects = realm.objects(Project);
-    //   const subquery = projects.filtered(
-    //     // :snippet-start: subquery
-    //     // Returns projects with items that have not been completed
-    //     // by a user named Alex.
-    //     "SUBQUERY(items, $item, $item.isComplete == false AND $item.assignee == 'Alex').@count > 0"
-    //     // :remove-start:
-    //   );
-    //   expect(subquery.length).toBe(1);
-    //   expect(subquery[0].name).toBe("Example Project with Items");
+    test("Subquery queries", () => {
+      const projects = realm.objects(Project);
+      const subquery = projects.filtered(
+        // :snippet-start: subquery
+        // Find projects with incomplete to-do items assigned to Alex.
+        "SUBQUERY(items, $item, $item.isComplete == false AND $item.assignee == 'Alex').@count > 0"
+        // :snippet-end:
+      );
+      expect(subquery.length).toBe(1);
+      expect(subquery[0].name).toBe("Example Project with Items");
 
-    //   const subquery2 = projects.filtered(
-    //     // :remove-end:
-
-    //     // Returns the projects where the number of completed items is
-    //     // greater than or equal to the value of a project's `quota` property.
-    //     "SUBQUERY(items, $item, $item.isComplete == true).@count >= quota"
-    //     // :snippet-end:
-    //   );
-    //   expect(subquery2.length).toBe(1);
-    //   expect(subquery2[0].name).toBe("Project with Quota");
-    // });
+      const subquery2 = projects.filtered(
+        // :snippet-start: subquery-count
+        // Find projects where the number of completed to-do items 
+        // is greater than or equal to the project's `quota` property.
+        "SUBQUERY(items, $item, $item.isComplete == true).@count >= quota"
+        // :snippet-end:
+      );
+      expect(subquery2.length).toBe(1);
+      expect(subquery2[0].name).toBe("Project that Meets Quota");
+    });
 
       test("Dictionary operators", () => {
         const dictionaries = realm.objects(Project);
 
-        const fooKey = dictionaries.filtered(
-          // :snippet-start: dictionary-operators
-          // Evaluates if there is a dictionary key with the name 'foo'
-          "ANY dict.@keys == $0",
-          "foo"
+        const statusKey = dictionaries.filtered(
+        // :snippet-start: dictionary-operators
+          // Finds `comments` dictionary properties with key 'status'
+          "comments.@keys == $0", "status"
 
-          // :remove-start:
+        // :remove-start:
         );
-        const fooBarKeyValue = dictionaries.filtered(
-          // :remove-end:
-          // Evaluates if there is a dictionary key with key 'foo' and value 'bar
-          "dict['foo'] == $0",
-          "bar"
-
-          // :remove-start:
+        const statusOnTrack = dictionaries.filtered(
+        // :remove-end:
+          // Find `comments` dictionary properties with key 'status'
+          // and value 'On track'
+          "comments['status'] == $0", "On track"
+        // :remove-start:
         );
         const numItemsInDict = dictionaries.filtered(
-          // :remove-end:
-          // Evaluates if there is greater than one key-value pair in the dictionary
-          "dict.@count > $0",
-          1
+        // :remove-end:
+          // Finds `comments` dictionary properties with
+          // more than one key-value pair
+          "comments.@count > $0", 1
 
-          // :remove-start:
+        // :remove-start:
         );
 
         const hasString = dictionaries.filtered(
           // :remove-end:
-          // Evaluates if dictionary has property of type 'string'
-          "ANY dict.@type == 'string'"
+          //Find `comments` dictionary properties where ANY
+          // values are of type 'string`
+          "ANY comments.@type == 'string'"
+          // :remove-start:
+        );
+
+        const hasStringImplied = dictionaries.filtered(
+          // :remove-end:
+          "comments.@type == 'string'" // (Equivalent - ANY is implied.)
 
           // :remove-start:
         );
 
-        // TODO: fails, unsure why
-        const allBool = dictionaries.filtered(
+        const allInt = dictionaries.filtered(
           // :remove-end:
-          // Evaluates if all the dictionary's values are of type 'int'
-          "ALL dict.@type == 'int'"
+          // Finds `comments` dictionary properties where ALL
+          // values are of type 'int'
+          "ALL comments.@type == 'int'"
 
           // :remove-start:
         );
 
-        // TODO: fails, unsure why
-        const noFloats = dictionaries.filtered(
+        const noInts = dictionaries.filtered(
           // :remove-end:
-          // Evaluates if dictionary does not have any values of type 'int'
-          "NONE dict.@type == 'int'"
+          // Finds `comments` dictionary properties where NO
+          // values are of type 'int'
+          "NONE comments.@type == 'int'"
 
           // :remove-start:
         );
 
-        // TODO: fails, unsure why
-        const allStringNoKeyWord = dictionaries.filtered(
-          // :remove-end:
-          // ANY is implied.
-          "dict.@type == 'string'"
-          // :snippet-end:
-        );
-
-        expect(fooKey.length).toBe(1);
-        expect(fooBarKeyValue.length).toBe(1);
-        expect(numItemsInDict.length).toBe(1);
-        expect(hasString.length).toBe(2);
-        expect(allBool.length).toBe(1);
-        expect(noFloats.length).toBe(2);
-        expect(allStringNoKeyWord.length).toBe(2);
+        expect(statusKey.length).toBe(3);
+        expect(statusOnTrack.length).toBe(1);
+        expect(numItemsInDict.length).toBe(3);
+        expect(hasString.length).toBe(3);
+        expect(hasStringImplied.length).toBe(3);
+        expect(allInt.length).toBe(0);
+        expect(noInts.length).toBe(3);
       });
   });
-
-  // describe("Dictionary queries", () => {
-  //   const Dictionary = {
-  //     name: "Dictionary",
-  //     properties: { dict: "{}" },
-  //   };
-
-  //   let realm;
-  //   const path = "dictionary.realm";
-  //   beforeAll(async () => {
-  //     realm = await Realm.open({
-  //       schema: [Dictionary],
-  //       path,
-  //     });
-  //     realm.write(() => {
-  //       realm.create("Dictionary", {
-  //         dict: {
-  //           foo: "bar",
-  //         },
-  //       });
-  //       realm.create("Dictionary", {
-  //         dict: {
-  //           isTrue: false,
-  //         },
-  //       });
-  //       realm.create("Dictionary", {
-  //         dict: {
-  //           baz: "Biz",
-  //           num: 1.0, // Note: Realm treats this as a double internally
-  //         },
-  //       });
-  //     });
-  //   });
-  //   // afterAll(() => {
-  //   //   realm.close();
-  //   //   Realm.deleteFile({ path });
-  //   // });
-
-  // });
 
   // describe("Backlink queries", () => {
   //   test("dot-notation", () => {
@@ -626,61 +676,9 @@ describe("Realm Query Language Reference", () => {
   //   });
   // });
 
-  describe("Parameterized queries", () => {
-    test("Predicate substitution", () => {
-      const items = realm.objects(Item);
 
-      // prettier-ignore
-      const substitution = items.filtered(
-        // :snippet-start: predicate
-        "progressMinutes > 1 AND assignee == $0", "Ali"
-        // :snippet-end:
-      );
-      expect(substitution.length).toBe(1);
-    });
 
-    test("Multiple predicate substitution", () => {
-      const items = realm.objects(Item);
 
-      // prettier-ignore
-      const substitution = items.filtered(
-        // :snippet-start: multiple-predicate
-        "progressMinutes > $0 AND assignee == $1", 1, "Alex"
-        // :snippet-end:
-      );
-      expect(substitution.length).toBe(1);
-    });
-  });
-
-  describe("Arithmetic operators", () => {
-    test("Basic arithmetic", () => {
-      const items = realm.objects(Item);
-      const basicMath = items.filtered(
-        // :snippet-start: basic-arithmetic
-        "2 * priority > 6"
-        // :remove-start:
-      );
-      const lessBasicMath = items.filtered(
-        // :remove-end:
-        // Is equivalent to
-        "priority >= 2 * (2 - 1) + 2"
-        // :snippet-end:
-      );
-
-      expect(basicMath.length).toBe(5);
-      expect(lessBasicMath.length).toBe(5);
-    });
-
-    test("Arithmetic with object properties", () => {
-      const items = realm.objects(Item);
-      const mathWithObjProps = items.filtered(
-        // :snippet-start: arithmetic-obj-properties
-        "progressMinutes * priority == 90"
-        // :snippet-end:
-      );
-      expect(mathWithObjProps.length).toBe(2);
-    });
-  });
 
   // describe("ObjectId and UUID tests", () => {
   //   const OidUuid = {
@@ -777,15 +775,7 @@ describe("Realm Query Language Reference", () => {
   //     realm.close();
   //     Realm.deleteFile({ path });
   //   });
-  //   test("Deeply nested dot notation", () => {
-  //     const employees = realm.objects("Employee");
-  //     const deeplyNestedMatch = employees.filtered(
-  //       // :snippet-start: deep-dot-notation
-  //       "workplace.address.zipcode == 10019"
-  //       // :snippet-end:
-  //     );
-  //     expect(deeplyNestedMatch.length).toBe(1);
-  //   });
+
   // });
 
   // test("Nil type", () => {
@@ -868,66 +858,70 @@ describe("Realm Query Language Reference", () => {
   //   });
   // });
 
-  // describe("Date operators", () => {
-  //   const DateTime = {
-  //     name: "Date",
-  //     properties: { name: "string", timeCompleted: "date" },
-  //   };
+  describe("Date queries", () => {
+    // Uses a test-specific schema with Date type
+    const DateTime = {
+      name: "Date",
+      properties: { name: "string", dateCompleted: "date" },
+    };
 
-  //   let realm;
-  //   const path = "date.realm";
-  //   beforeAll(async () => {
-  //     realm = await Realm.open({
-  //       schema: [DateTime],
-  //       path,
-  //     });
-  //     realm.write(() => {
-  //       realm.create("Date", {
-  //         name: "now",
-  //         timeCompleted: new Date(),
-  //       });
-  //       realm.create("Date", {
-  //         name: "after",
-  //         timeCompleted: new Date(),
-  //       });
-  //       realm.create("Date", {
-  //         name: "past",
-  //         timeCompleted: new Date("December 17, 1985 03:24:00"),
-  //       });
-  //     });
-  //   });
-  //   afterAll(() => {
-  //     realm.close();
-  //     Realm.deleteFile({ path });
-  //   });
-  //   test("Date operators", () => {
-  //     const dates = realm.objects("Date");
-  //     const someDate = new Date("December 17, 2011 03:24:00");
+    let realm;
+    const path = "date.realm";
 
-  //     // prettier-ignore
-  //     const dateParameterizedQuery = dates.filtered(
-  //       // :snippet-start: date-parameterized-query
-  //       "timeCompleted < $0", someDate
-  //       // :snippet-end:
-  //     );
+    // Add, then delete Date objects for this test
+    beforeEach(async () => {
+      realm = await Realm.open({
+        schema: [DateTime],
+        path,
+      });
 
-  //     // :snippet-start: date-alt-representation
-  //     var date = new Date("2021-02-20@17:30:15:0");
+      realm.write(() => {
+        realm.create("Date", {
+          name: "now",
+          dateCompleted: new Date(),
+        });
+        realm.create("Date", {
+          name: "past",
+          dateCompleted: new Date("December 17, 1985 03:24:00"),
+        });
+        realm.create("Date", {
+          name: "withinYear",
+          dateCompleted: new Date("February 17, 2021 03:24:00"),
+        });
+      });
+    });
 
-  //     // :remove-start:
-  //     const dateAlt1 = dates.filtered(
-  //       // :remove-end:
-  //       "timeCompleted > $0",
-  //       date
-  //       // :remove-start:
-  //     );
-  //     // :remove-end:
-  //     // :snippet-end:
+    afterEach(() => {
+      realm.close();
+      Realm.deleteFile({ path });
+    });
 
-  //     expect(dateParameterizedQuery.length).toBe(1);
-  //     expect(dateAlt1.length).toBe(2);
-  //   });
-  // });
+    test("Date queries", () => {
+      const dates = realm.objects("Date");
+      // :snippet-start: date-alt-representation
+      var today = new Date("April 01, 2021 03:24:00");
+
+      var thisYear = new Date("2021-01-01@17:30:15:0");
+      // :snippet-end:
+      const dateParameterizedQuery = dates.filtered(
+        // :snippet-start: date-parameterized-query
+        // Find to-do items completed before today's date.
+        "dateCompleted < $0", today
+
+        // :remove-start:
+      );
+
+      const dateAlt1 = dates.filtered(
+        // :remove-end:
+        // Find to-do items completed this year up to today.
+        "dateCompleted > $0 AND dateCompleted < $1", thisYear, today
+        // :snippet-end:
+      );
+
+      expect(dateParameterizedQuery.length).toBe(2);
+      expect(dateAlt1.length).toBe(1);
+    });
+  });
 
   // test("full-text search", () => {
   //   const items = realm.objects(Item);

@@ -1,5 +1,33 @@
 import Realm, { BSON, ObjectSchema } from "realm";
 
+// Models for embedded objects & dot notation queries
+export class Office extends Realm.Object {
+  name!: string;
+  address!: Address;
+  static schema: ObjectSchema = {
+    name: "Office",
+    properties: {
+      name: "string",
+      address: "Address",
+    },
+  };
+}
+
+export class Address extends Realm.Object {
+  name!: string;
+  street!: string;
+  zipcode!: number;
+  static schema: ObjectSchema = {
+    name: "Address",
+    embedded: true,
+    properties: {
+      name: "string",
+      street: "string",
+      zipcode: "int",
+    },
+  };
+}
+
 // :snippet-start: rql-data-models
 export class Item extends Realm.Object<Item> {
   _id!: BSON.ObjectId;
@@ -27,13 +55,13 @@ export class Item extends Realm.Object<Item> {
     primaryKey: "_id",
   };
 }
-
 export class Project extends Realm.Object<Project> {
   _id!: BSON.ObjectId;
   name!: string;
   items!: Realm.List<Item>;
   quota?: number;
   comments?: Realm.Dictionary<string>;
+  projectLocation?: Office;
 
   static schema: ObjectSchema = {
     name: "Project",
@@ -43,6 +71,7 @@ export class Project extends Realm.Object<Project> {
       items: "Item[]",
       quota: "int?",
       comments: "string?{}",
+      projectLocation: "Office?",
     },
     primaryKey: "_id",
   };
