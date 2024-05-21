@@ -1,9 +1,9 @@
 import Realm, { BSON } from "realm";
-import { Item, Project } from "./models/rql-data-models.ts";
+import { Item, Project, Office, Address } from "./models/rql-data-models.ts";
 
-describe("Test Item and Project RQL Models", () => {
+describe("Test RQL Models", () => {
   let realm;
-  const config = { schema: [Project, Item] };
+  const config = { schema: [Project, Item, Office, Address] };
 
   beforeEach(async () => {
     realm = await Realm.open(config);
@@ -23,6 +23,7 @@ describe("Test Item and Project RQL Models", () => {
   afterAll(() => {
     Realm.deleteFile(config);
   });
+
   test("Can open realm with config", async () => {
     expect(realm.isClosed).toBe(false);
   });
@@ -46,15 +47,25 @@ describe("Test Item and Project RQL Models", () => {
         _id: new BSON.ObjectId(),
         name: "get tea",
       });
+      const officeAddress = realm.create(Office, {
+        name: "Austin",
+        address: {
+          name: "Main Branch",
+          street: "123 Main St",
+          zipcode: 10019,
+        },
+      });
       realm.create(Project, {
         _id: new BSON.ObjectId(),
         name: "beverages",
         items: [teaItem],
+        projectLocation: officeAddress,
       });
     });
     const bevProject = realm.objects(Project)[0];
     expect(bevProject._id instanceof BSON.ObjectId).toBe(true);
     expect(bevProject.name).toBe("beverages");
     expect(bevProject.items[0].name).toBe("get tea");
+    expect(bevProject.projectLocation.name).toBe("Austin");
   });
 });

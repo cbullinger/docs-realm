@@ -1,22 +1,11 @@
 import Realm, { BSON, ObjectSchema } from "realm";
 
 // Models for embedded objects & dot notation queries
-export class Office extends Realm.Object {
-  name!: string;
-  address!: Address;
-  static schema: ObjectSchema = {
-    name: "Office",
-    properties: {
-      name: "string",
-      address: "Address",
-    },
-  };
-}
-
-export class Address extends Realm.Object {
+export class Address extends Realm.Object<Address> {
   name!: string;
   street!: string;
   zipcode!: number;
+
   static schema: ObjectSchema = {
     name: "Address",
     embedded: true,
@@ -24,6 +13,19 @@ export class Address extends Realm.Object {
       name: "string",
       street: "string",
       zipcode: "int",
+    },
+  };
+}
+
+export class Office extends Realm.Object<Office> {
+  name!: string;
+  address!: Address;
+
+  static schema: ObjectSchema = {
+    name: "Office",
+    properties: {
+      name: "string",
+      address: "Address",
     },
   };
 }
